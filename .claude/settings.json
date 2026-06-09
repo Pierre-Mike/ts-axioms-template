@@ -4,12 +4,30 @@
     "allow": [
       "Bash(bun install)",
       "Bash(bun test)",
+      "Bash(bun test:*)",
+      "Bash(bun run lint)",
       "Bash(bun run lint:ci)",
       "Bash(bun run typecheck)",
+      "Bash(bun run test)",
       "Bash(bun run audit)",
+      "Bash(bun run verify)",
+      "Bash(bun run dev)",
+      "Bash(bun run openapi:gen)",
+      "Bash(bun run openapi:check)",
+      "Bash(bun run scaffold:slice:*)",
       "Bash(bunx biome ci:*)",
+      "Bash(bunx biome check:*)",
+      "Bash(bunx tsc:*)",
       "Bash(bunx fallow audit)"
     ],
     "deny": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "bun run .claude/hooks/post-edit-check.ts" }]
+      }
+    ]
   }
 }
