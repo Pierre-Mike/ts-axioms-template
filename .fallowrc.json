@@ -10,13 +10,17 @@
     "global-setup.ts",
     "global-teardown.ts",
     "playwright.config.ts",
-    "vite.config.ts"
+    "vite.config.ts",
+    "scripts/*.ts"
   ],
   "workspaces": {
     "packages": ["apps/*", "shared"]
   },
   "ignoreExports": [
-    { "file": "apps/server/src/features/health/health.routes.ts", "exports": ["app"] }
+    {
+      "file": "apps/server/src/features/health/health.routes.ts",
+      "exports": ["app"]
+    }
   ],
   "duplicates": {
     "minOccurrences": 3

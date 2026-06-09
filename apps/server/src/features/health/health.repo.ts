@@ -7,6 +7,7 @@
  * Layer. Tests substitute a fake Layer with a frozen clock.
  */
 import { Context, Effect, Layer } from "effect"
+import { appConfig } from "../../platform/config"
 
 export interface ClockRepoApi {
   /** Wall-clock now, epoch ms. */
@@ -21,15 +22,14 @@ export class ClockRepo extends Context.Tag("ClockRepo")<ClockRepo, ClockRepoApi>
 
 /**
  * Live implementation. Captures the boot time once at layer construction so
- * uptime is measured from process start, and reads the version from the env
- * (falling back to a literal so the slice works with zero configuration).
+ * uptime is measured from process start, and reads the version through the
+ * typed config (platform/config.ts — the only sanctioned env funnel).
  */
 export const ClockRepoLive: Layer.Layer<ClockRepo> = Layer.sync(ClockRepo, () => {
   const bootedAt = Date.now()
-  const version = process.env.APP_VERSION ?? "0.0.0"
   return {
     now: () => Effect.sync(() => Date.now()),
     startedAt: () => Effect.succeed(bootedAt),
-    version: () => Effect.succeed(version),
+    version: () => Effect.succeed(appConfig.version),
   }
 })

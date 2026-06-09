@@ -13,6 +13,12 @@ pre-commit:
       run: bunx biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
 
+commit-msg:
+  jobs:
+    # Conventional-commit gate (machine-readable history; feeds release-please).
+    - name: conventional-commit
+      run: bun run scripts/check-commit-msg.ts {1}
+
 pre-push:
   piped: true
   jobs:

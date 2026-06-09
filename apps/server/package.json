@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "@effect/schema": "^0.75.5",
+    "@ts-axioms/shared": "workspace:*",
     "effect": "^3.10.0",
     "hono": "^4.6.11"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.14"
+    "@types/bun": "^1.3.14",
+    "fast-check": "^4.8.0"
   }
 }

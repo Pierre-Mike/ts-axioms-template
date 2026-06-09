@@ -10,6 +10,7 @@
  */
 import { Effect, type ManagedRuntime } from "effect"
 import { Hono } from "hono"
+import { errorEnvelope } from "../../platform/http"
 import { appRuntime } from "../../platform/runtime"
 import { buildStatus, parseVerbose } from "./health.core"
 import { ClockRepo } from "./health.repo"
@@ -36,7 +37,9 @@ export const buildHealthApp = (runtime: HealthRouteRuntime) =>
 
     const result = await runtime.runPromise(Effect.either(program))
     if (result._tag === "Left") {
-      return c.json({ ok: false, error: result.left }, 400)
+      // Shared ApiErrorBody envelope; tag -> status mapping lives in platform/http.ts.
+      const { body, status } = errorEnvelope(result.left)
+      return c.json(body, status)
     }
     const { status, verbose } = result.right
     return c.json(verbose ? { ...status, verbose: true } : status)

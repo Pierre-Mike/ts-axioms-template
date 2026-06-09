@@ -8,6 +8,7 @@
  * (`health.repo.ts` / `health.routes.ts`) reads the clock + version, calls
  * these functions, and lifts any `Either` into Effect at the boundary.
  */
+import type { HealthStatus } from "@ts-axioms/shared"
 import { Either } from "effect"
 
 export interface HealthInput {
@@ -18,13 +19,11 @@ export interface HealthInput {
   readonly now: number
 }
 
-export interface HealthStatus {
-  readonly ok: boolean
-  readonly version: string
-  readonly uptimeMs: number
-}
-
-/** Build the health payload from already-read inputs. Pure, total. */
+/**
+ * Build the health payload from already-read inputs. Pure, total. The return
+ * shape is the shared `@effect/schema` contract — server and client read the
+ * same type, so the RPC boundary can't drift.
+ */
 export const buildStatus = (input: HealthInput): HealthStatus => ({
   ok: true,
   version: input.version,

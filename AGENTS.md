@@ -1,11 +1,16 @@
 # AGENTS.md — ts-axioms template
 
-Tool-neutral operating rules for any coding agent working in this repo. This
-mirrors `CLAUDE.md`; both must stay in sync.
+Tool-neutral operating rules for any coding agent working in this repo.
 
+Everything between the markers below is the shared canon, byte-identical with
+`CLAUDE.md` — `scripts/docs-sync.test.ts` fails the build if they drift. Edit
+both files together.
+
+<!-- axioms:start -->
 ## Architecture: feature-first vertical slices
 
-Organize by feature, not by layer. Each slice owns its vertical:
+Code is organized by **feature**, not by layer. Each slice owns its full
+vertical:
 
 ```
 apps/server/src/
@@ -14,7 +19,7 @@ apps/server/src/
     <feature>.core.test.ts   # co-located unit test (data-in / data-out)
     <feature>.repo.ts        # I/O as an Effect service (Context.Tag + Layer)
     <feature>.routes.ts      # Hono shell; impure read -> pure core -> respond
-  platform/                  # cross-cutting infra (runtime.ts, etc.)
+  platform/                  # cross-cutting infra (runtime, typed config, http errors)
   api.ts                     # assembles routes; exports AppType for hc RPC
   main.ts                    # composition root (Bun.serve, provides live Layers)
 apps/web/                    # optional UI: Vite+React + TanStack Router + Query
@@ -22,48 +27,87 @@ apps/e2e/                    # Playwright; asserts /health end-to-end
 shared/                      # @effect/schema contracts (promote when >=2 apps use)
 ```
 
+`platform/` is for infra shared across slices (the Effect runtime, typed
+config, HTTP error mapping). Anything feature-specific lives in its slice.
+
 ## The impureim sandwich (critical)
 
-- `*.core.ts` is pure: failures are values (`Either`/`Option`/`Data` tagged
-  unions). No `Effect`/`Layer`/`Context`/`ManagedRuntime`, no async, no I/O.
-  `Either`/`Option`/`Data`/`Schema` are allowed.
-- `*.repo.ts` / `*.routes.ts` / `main.ts` use the Effect runtime (`Context.Tag`
-  services, `Layer` wiring, `ManagedRuntime`).
-- Lift core into Effect at the boundary: read I/O, call pure core, respond. A
-  core `Either` is `yield*`-ed inside `Effect.gen`; a `Left` short-circuits as a
-  typed failure.
+- **`*.core.ts` is pure.** Failures are values: `Either<E, A>`, `Option`, or
+  `Data` tagged unions. Typed errors YES — but **NO** `Effect` / `Layer` /
+  `Context` / `ManagedRuntime`, no async, no I/O, no clock. `Either`, `Option`,
+  `Data`, and `Schema` from `effect` / `@effect/schema` are allowed.
+- **`*.repo.ts` / `*.routes.ts` / `main.ts` use Effect.** Services are
+  `Context.Tag`s, wiring is `Layer`s, the runtime is a `ManagedRuntime`.
+- **Lift core into Effect at the boundary.** A route reads I/O (impure), calls
+  the pure core (sandwich filling), responds. An `Either` returned by core is
+  `yield*`-ed directly inside `Effect.gen` (an `Either` is a valid Effect
+  yieldable; a `Left` short-circuits as a typed failure).
 
-Biome blocks `Effect`/`Layer`/`Context` imports and `*.repo` imports inside
-`*.core.ts`.
+Biome enforces this: in `*.core.ts` the imports `Effect`/`Layer`/`Context` and
+any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
+`console` / `setTimeout` / `setInterval` are banned, and GritQL plugins
+(`biome-plugins/`) ban `throw` and `await`.
 
-## Other axioms (tool-enforced)
+## Other axioms (each enforced by a tool)
 
-- Named params for 3+ args (`useMaxParams` max 2).
-- No raw `fetch` global, no `axios`. Use the typed Hono RPC client `hc<AppType>`.
-- Co-located tests (`*.test.ts`), never `__tests__/`.
-- TanStack Router loads (loader -> `ensureQueryData`); TanStack Query owns the
-  cache (component -> `useSuspenseQuery`). Define `queryOptions` once. Router is
-  UI-only, not Start.
+- **Named params for 3+ args.** `useMaxParams` caps positional params at 2 — pass
+  an options object beyond that.
+- **No raw `fetch`, no `axios`.** `noRestrictedGlobals` bans the `fetch` global;
+  `noRestrictedImports` bans `axios`. The web app talks to the server through the
+  typed Hono RPC client (`hc<AppType>`) only.
+- **Co-located tests.** `*.test.ts` next to its source; never a `__tests__/`
+  folder. Every `*.core.ts` MUST have a sibling `*.core.test.ts`
+  (`scripts/check-colocated-tests.ts` gates `bun run test`). Use fast-check
+  properties for non-trivial pure logic.
+- **Typed config at boot.** The server reads `process.env` ONLY in
+  `platform/config.ts` (schema-validated, fails fast); Biome bans the `process`
+  global elsewhere under `apps/server/src` (composition root excepted).
+- **One error shape.** Failures cross HTTP as the shared `ApiErrorBody`
+  envelope; map new tags to statuses in `platform/http.ts` `STATUS_BY_TAG`.
+- **Contracts decode at the boundary.** Shared `@effect/schema` contracts live
+  in `shared/src`; the web client decodes responses with the shared
+  `decode*` helpers — drift fails loudly. `openapi.json` is generated from the
+  same schemas (`bun run openapi:gen`; CI checks freshness).
+- **Router loads, Query owns the cache.** Define `queryOptions` ONCE; the route
+  `loader` calls `ensureQueryData`, the component calls `useSuspenseQuery` on the
+  same options. No loading flash, no key drift. TanStack Router is UI-only (NOT
+  Start).
+- **Conventional commits.** `type(scope)?: subject` — the lefthook commit-msg
+  hook rejects anything else; release-please builds releases from the history.
 
 ## How to add a feature slice
 
-1. Create `apps/server/src/features/<feature>/`.
-2. `<feature>.core.ts` (pure) + `<feature>.core.test.ts` (co-located).
-3. `<feature>.repo.ts` (`Context.Tag` + `*RepoLive` Layer).
-4. `<feature>.routes.ts` (Hono `Effect.gen` sandwich; export `app`).
-5. Mount in `api.ts`; add `*RepoLive` to `AppLayer` in `platform/runtime.ts`.
-6. (web) add `<feature>.queries.ts` + `<feature>.route.tsx`.
+1. `bun run scaffold:slice <feature>` — generates the four slice files in the
+   canonical shape, mounts the route in `api.ts`, registers the live Layer in
+   `platform/runtime.ts`, and updates `.fallowrc.json`. Never hand-copy a slice.
+2. Implement the real pure logic in `<feature>.core.ts` + its co-located test.
+3. Replace the stub I/O in `<feature>.repo.ts`.
+4. Map new error tags in `platform/http.ts`.
+5. Promote contracts to `shared/src` when the web consumes them; register the
+   path in `scripts/generate-openapi.ts` and run `bun run openapi:gen`.
+6. (web) add `<feature>.queries.ts` (queryOptions once, decode with the shared
+   schema) + `<feature>.route.tsx`.
+7. `bun run verify`.
 
 ## Gate commands
 
 ```bash
-bun install            # install + wire git hooks
-bun run lint:ci        # biome ci .
+bun install            # installs + wires git hooks (lefthook)
+bun run verify         # lint:ci + typecheck + test + audit — the CI gates, one shot
+bun run lint           # biome check --write .   (autofix)
+bun run lint:ci        # biome ci .              (no writes; CI gate)
 bun run typecheck      # tsc -b
-bun test               # unit tests
-bun run audit          # fallow audit
-bun run scaffold:clean # backend-only (removes web + e2e)
+bun run test           # core/test colocation check + bun test apps/server shared scripts
+bun run test:e2e       # playwright (apps/e2e; run `bunx playwright install` once)
+bun run test:mutation  # stryker mutation run over *.core.ts (also weekly in CI)
+bun run audit          # bunx fallow audit (dead code / dup / cycles / complexity)
+bun run openapi:gen    # regenerate openapi.json from the shared schemas
+bun run scaffold:slice # generate a new feature slice
+bun run scaffold:clean # remove apps/web + apps/e2e -> backend-only repo
+bun run dev            # server (:8787) + web (:5173)
 ```
 
-CI job names `lint` / `typecheck` / `test` / `audit` must match the branch
-ruleset's required checks in `.github/rulesets/main.json`.
+CI job names (`lint` / `typecheck` / `test` / `audit`) are a contract with the
+branch ruleset's required checks — keep them identical. `e2e` and `zizmor` run
+as additional non-required jobs; mutation tests and agent evals run weekly.
+<!-- axioms:end -->

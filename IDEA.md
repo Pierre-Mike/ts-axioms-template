@@ -1,5 +1,13 @@
 # IDEA.md — making ts-axioms-template a first-class AI-ready repo
 
+> **Status: implemented** (2026-06-09) — all items below are in the repo, with
+> two exceptions left for a human: **#2** (PostToolUse hook) and **#19**
+> (permission allowlist) touch `.claude/settings.json` permission machinery,
+> which the agent sandbox refuses to self-modify. Apply them manually if
+> wanted. Deviations: #2 would run Biome only (not scoped `tsc`) to keep the
+> hook fast; #11 generates OpenAPI via a registry script
+> (`scripts/generate-openapi.ts`) instead of the `hono-openapi` middleware.
+
 Candidate upgrades, ordered by leverage. Each follows the repo's own axiom:
 **no enforcement, no rule** — every idea names the tool that enforces it.
 "AI-ready" here means: an agent dropped into this repo gets fast feedback,

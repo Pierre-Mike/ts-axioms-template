@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { Either } from "effect"
+import * as fc from "fast-check"
 import { buildStatus, parseVerbose } from "./health.core"
 
 describe("buildStatus", () => {
@@ -33,5 +34,32 @@ describe("parseVerbose", () => {
     if (Either.isLeft(result)) {
       expect(result.left).toEqual({ _tag: "InvalidVerboseFlag", received: "maybe" })
     }
+  })
+})
+
+// Property-based coverage (fast-check): pure data-in/data-out cores are ideal
+// property targets — no mocks, thousands of generated cases per run.
+describe("core properties", () => {
+  it("buildStatus: uptime is never negative, ok is always true", () => {
+    fc.assert(
+      fc.property(
+        fc.record({ version: fc.string(), startedAt: fc.integer(), now: fc.integer() }),
+        (input) => {
+          const status = buildStatus(input)
+          expect(status.uptimeMs).toBeGreaterThanOrEqual(0)
+          expect(status.ok).toBe(true)
+          expect(status.version).toBe(input.version)
+        },
+      ),
+    )
+  })
+
+  it("parseVerbose is total: any string yields an Either, never a throw", () => {
+    fc.assert(
+      fc.property(fc.string(), (raw) => {
+        const result = parseVerbose(raw)
+        expect(Either.isEither(result)).toBe(true)
+      }),
+    )
   })
 })

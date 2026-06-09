@@ -37,21 +37,42 @@ Full setup (template/degit, branch protection, first slice, backend-only):
 ## Gates
 
 ```bash
-bun run lint:ci    # biome ci .
+bun run verify     # the four CI gates, one shot
+bun run lint:ci    # biome ci . (+ GritQL purity plugins, openapi freshness in CI)
 bun run typecheck  # tsc -b
-bun test           # co-located unit tests
-bun run audit      # fallow audit
+bun run test       # core/test colocation check + co-located unit tests
+bun run audit      # fallow audit (CI adds `bun audit` for vulnerabilities)
 ```
 
 These four are the CI jobs (`lint` / `typecheck` / `test` / `audit`) and the
-branch ruleset's required checks — the names are a contract.
+branch ruleset's required checks — the names are a contract. CI also runs
+non-required `e2e` (Playwright) and `zizmor` (workflow lint) jobs per PR, plus
+weekly mutation tests (Stryker on `*.core.ts`) and golden-task agent evals
+(`evals/`).
 
 ## Reference slice: `health`
 
 `apps/server/src/features/health/` is the canonical slice and the CI smoke test:
 pure core (`health.core.ts`) → Effect repo (`health.repo.ts`) → Hono route
-(`health.routes.ts`) → typed RPC → web route → Playwright e2e. Copy its shape
-for new features.
+(`health.routes.ts`) → shared schema contract (`shared/src/health.ts`) → typed
+RPC with runtime decode → web route → Playwright e2e. Don't hand-copy it —
+generate new slices:
+
+```bash
+bun run scaffold:slice <feature>   # core + test + repo + routes, mounted + wired
+```
+
+## AI-ready by construction
+
+- `CLAUDE.md` / `AGENTS.md` share a marker-delimited canon; a unit test fails
+  the build if they drift.
+- Conventional commits enforced at commit-msg (lefthook); release-please
+  automates releases from the history.
+- `openapi.json` is generated from the shared `@effect/schema` contracts and
+  freshness-checked in CI.
+- Toolchain pinned (`.bun-version`, `packageManager`, SHA-pinned actions);
+  Renovate auto-merges green minor/patch dev-dep bumps.
+- `.devcontainer/` gives agents and humans the identical sandbox.
 
 ## Optional tiers
 
@@ -59,6 +80,9 @@ for new features.
   not installed by `bun install` or CI bootstrap).
 - `bun run scaffold:clean` — strip `apps/web` + `apps/e2e` for a backend-only
   service.
+- `bun run test:mutation` — Stryker mutation run over the pure cores.
+- `./evals/run.sh` — headless agent golden tasks judged by the gates
+  (needs `ANTHROPIC_API_KEY`).
 
 ## Docs
 

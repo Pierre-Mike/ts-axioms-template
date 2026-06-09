@@ -1,4 +1,4 @@
-// Shared @effect/schema contracts live here once >=2 apps consume them.
-// Until then this slot is intentionally empty; promote a contract by exporting
-// its Schema from this barrel and importing it from both apps.
-export {}
+// Shared @effect/schema contracts. Promote a contract here the moment a second
+// app consumes it; until then a slice may keep its types local.
+export * from "./api-error"
+export * from "./health"

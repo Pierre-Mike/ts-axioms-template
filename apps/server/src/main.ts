@@ -3,12 +3,11 @@
  * the shared Effect runtime (live Layers are wired in platform/runtime.ts).
  */
 import app from "./api"
+import { appConfig } from "./platform/config"
 import { appRuntime } from "./platform/runtime"
 
-const PORT = Number(process.env.PORT ?? 8787)
-
 const server = Bun.serve({
-  port: PORT,
+  port: appConfig.port,
   fetch: app.fetch,
   idleTimeout: 0,
 })

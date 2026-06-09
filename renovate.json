@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Keep the template evergreen: strong gates make automated bumps safe. Patch/minor devDependency updates auto-merge once the four required checks are green.",
+  "extends": ["config:best-practices", ":semanticCommits"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true
+    }
+  ]
+}

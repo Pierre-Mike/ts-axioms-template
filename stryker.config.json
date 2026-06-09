@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-core.json",
+  "testRunner": "command",
+  "commandRunner": { "command": "bun test apps/server shared" },
+  "mutate": ["apps/server/src/**/*.core.ts"],
+  "thresholds": { "high": 95, "low": 85, "break": 75 },
+  "reporters": ["clear-text", "progress"],
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true
+}
