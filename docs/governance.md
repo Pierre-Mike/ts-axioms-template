@@ -2,7 +2,7 @@
 
 Branch protection lives in the repo as a **GitHub repository ruleset**:
 `.github/rulesets/main.json`. It is version-controlled, reviewable, and applied
-either automatically (bootstrap workflow) or manually (script).
+with an idempotent script.
 
 ## What `main.json` enforces
 
@@ -27,17 +27,10 @@ reports. Change both together.
 
 ## Applying the ruleset
 
-### Automatic — bootstrap workflow
-
-`.github/workflows/bootstrap.yml` runs on push to `main`. On the first push it
-applies `main.json` via the GitHub API using the built-in `GITHUB_TOKEN`
-(`permissions: administration: write`), then self-guards: subsequent pushes find
-the ruleset already present and exit immediately.
-
-### Manual — apply-ruleset.sh
-
-If Actions lacks the permission (common under org policy) or you edit the
-ruleset, apply it locally:
+Managing rulesets is an admin-only operation that the built-in `GITHUB_TOKEN`
+can never perform (there is no `administration:` grant in workflow
+`permissions:`), so application is a one-time manual step after creating a
+repo from the template — and again whenever you edit the ruleset:
 
 ```bash
 gh auth login                       # need admin on the repo
@@ -53,8 +46,7 @@ it exists, otherwise POSTs a create.
 
 1. Edit `.github/rulesets/main.json`.
 2. If you touch `required_status_checks`, update `ci.yml` job names to match.
-3. Re-apply: `./.github/scripts/apply-ruleset.sh` (or push to trigger bootstrap
-   on a repo where the ruleset was deleted).
+3. Re-apply: `./.github/scripts/apply-ruleset.sh`.
 4. Commit the JSON change through a PR like any other code.
 
 ## Org-level bypass

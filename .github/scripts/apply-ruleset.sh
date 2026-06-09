@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
 # Idempotently apply .github/rulesets/main.json to the current repository's
-# branch rulesets via the GitHub API. Manual fallback for the self-applying
-# bootstrap workflow (run it locally if bootstrap is skipped or you edit the
-# ruleset). Requires `gh auth login` (or GH_TOKEN) with admin on the repo.
+# branch rulesets via the GitHub API. Run once after creating a repo from the
+# template, and again whenever you edit the ruleset — the built-in
+# GITHUB_TOKEN cannot do this (admin-only operation).
+# Requires `gh auth login` (or GH_TOKEN) with admin on the repo.
 #
 # Usage:  ./.github/scripts/apply-ruleset.sh [owner/repo]
 # If owner/repo is omitted, the current `gh repo` is used.

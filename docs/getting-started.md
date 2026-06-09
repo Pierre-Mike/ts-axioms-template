@@ -19,12 +19,16 @@ bun install
 This installs dependencies and wires the git hooks (`prepare` → `lefthook
 install`).
 
-## 3. Apply branch protection
+## 3. One-time repo settings
 
 ```bash
-# Automatic: pushing to main triggers .github/workflows/bootstrap.yml.
-# Manual fallback (need gh + repo admin):
+# Branch protection (needs gh + repo admin; GITHUB_TOKEN cannot manage rulesets):
 ./.github/scripts/apply-ruleset.sh
+
+# Let release-please open its release PR ("Allow GitHub Actions to create and
+# approve pull requests" — off by default on new repos):
+gh api -X PUT "repos/{owner}/{repo}/actions/permissions/workflow" \
+  -f default_workflow_permissions=read -F can_approve_pull_request_reviews=true
 ```
 
 See [governance.md](./governance.md).
@@ -38,10 +42,13 @@ curl localhost:8787/health
 
 ## 5. Add your first feature slice
 
-Follow the recipe in `CLAUDE.md` / `AGENTS.md`: create
-`apps/server/src/features/<feature>/` with `.core.ts` (+ `.core.test.ts`),
-`.repo.ts`, `.routes.ts`; mount it in `api.ts` and add its `*RepoLive` Layer to
-`platform/runtime.ts`. Add the web query + route if you have a UI.
+```bash
+bun run scaffold:slice <feature>
+```
+
+Then follow the recipe in `CLAUDE.md` / `AGENTS.md`: implement the pure core
+(+ co-located test), replace the stub I/O in `.repo.ts`, map error tags in
+`platform/http.ts`. Add the web query + route if you have a UI.
 
 ## 6. End-to-end tests (optional)
 
