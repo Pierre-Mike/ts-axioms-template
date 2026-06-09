@@ -2,11 +2,11 @@
 /**
  * scaffold:slice — generate a new feature slice in the canonical shape.
  *
- * `bun run scaffold:slice <feature>` (kebab-case) emits the four slice files
- * (pure core, co-located test, Effect repo, Hono routes), mounts the route in
- * api.ts, registers the live Layer in platform/runtime.ts, and whitelists the
- * route's `app` export for Fallow. Deterministic scaffolding beats a prose
- * recipe: humans and agents get the exact same, gate-passing shape every time.
+ * `bun run scaffold:slice <feature>` (kebab-case) emits the slice files
+ * (pure core, co-located tests, Effect repo, Hono routes), mounts the route in
+ * api.ts over the shared appRuntime, and registers the live Layer in
+ * platform/runtime.ts. Deterministic scaffolding beats a prose recipe: humans
+ * and agents get the exact same, gate-passing shape every time.
  */
 import { existsSync } from "node:fs"
 import { mkdir } from "node:fs/promises"
@@ -28,7 +28,6 @@ const pascal = name
   .split("-")
   .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
   .join("")
-const camel = pascal.charAt(0).toLowerCase() + pascal.slice(1)
 
 const sliceDir = join(root, "apps/server/src/features", name)
 if (existsSync(sliceDir)) fail(`slice already exists: apps/server/src/features/${name}`)
@@ -112,12 +111,12 @@ export const ${pascal}RepoLive: Layer.Layer<${pascal}Repo> = Layer.succeed(${pas
 const routesTs = `/**
  * Hono shell for the \`${name}\` slice — the impureim sandwich: impure read
  * through the Effect service, pure core in the middle, shared error envelope
- * on the Left branch.
+ * on the Left branch. Exports only the builder; api.ts injects the live
+ * appRuntime (tests inject a stub runtime over a fake Layer).
  */
 import { Effect, type ManagedRuntime } from "effect"
 import { Hono } from "hono"
 import { errorEnvelope } from "../../platform/http"
-import { appRuntime } from "../../platform/runtime"
 import { build${pascal}, parse${pascal}Id } from "./${name}.core"
 import { ${pascal}Repo } from "./${name}.repo"
 
@@ -142,10 +141,6 @@ export const build${pascal}App = (runtime: ${pascal}RouteRuntime) =>
     }
     return c.json(result.right)
   })
-
-const app = build${pascal}App(appRuntime)
-
-export { app }
 `
 
 const routesTestTs = `/**
@@ -199,24 +194,28 @@ for (const [file, content] of Object.entries(files)) {
 
 const apiPath = join(root, "apps/server/src/api.ts")
 let api = await Bun.file(apiPath).text()
-const importLine = `import * as ${camel}Route from "./features/${name}/${name}.routes"`
+const importLine = `import { build${pascal}App } from "./features/${name}/${name}.routes"`
 const lastFeatureImport = api.match(
-  /import \* as \w+Route from "\.\/features\/[^\n]*\n(?![\s\S]*import \* as \w+Route)/,
+  /import \{ build\w+App \} from "\.\/features\/[^\n]*\n(?![\s\S]*import \{ build\w+App \})/,
 )
 if (!lastFeatureImport || lastFeatureImport.index === undefined) {
   fail(
-    'api.ts anchor not found: expected an existing `import * as <x>Route from "./features/..."` line',
+    'api.ts anchor not found: expected an existing `import { build<X>App } from "./features/..."` line',
   )
 }
 const importEnd = (lastFeatureImport?.index ?? 0) + (lastFeatureImport?.[0].length ?? 0)
 api = `${api.slice(0, importEnd)}${importLine}\n${api.slice(importEnd)}`
 
-const lastRoute = api.match(/\n(\s*)\.route\("[^"]+", \w+Route\.app\)(?![\s\S]*\.route\()/)
+const lastRoute = api.match(
+  /\n(\s*)\.route\("[^"]+", build\w+App\(appRuntime\)\)(?![\s\S]*\.route\()/,
+)
 if (!lastRoute || lastRoute.index === undefined) {
-  fail('api.ts anchor not found: expected an existing `.route("/<x>", <x>Route.app)` call')
+  fail(
+    'api.ts anchor not found: expected an existing `.route("/<x>", build<X>App(appRuntime))` call',
+  )
 }
 const routeEnd = (lastRoute?.index ?? 0) + (lastRoute?.[0].length ?? 0)
-api = `${api.slice(0, routeEnd)}\n${lastRoute?.[1] ?? "  "}.route("/${name}", ${camel}Route.app)${api.slice(routeEnd)}`
+api = `${api.slice(0, routeEnd)}\n${lastRoute?.[1] ?? "  "}.route("/${name}", build${pascal}App(appRuntime))${api.slice(routeEnd)}`
 await Bun.write(apiPath, api)
 console.error(`mounted /${name} in apps/server/src/api.ts`)
 
@@ -237,33 +236,10 @@ runtime = runtime.replace(/Layer\.mergeAll\(([^)]*)\)/, (_, args: string) => {
 await Bun.write(runtimePath, runtime)
 console.error(`registered ${pascal}RepoLive in apps/server/src/platform/runtime.ts`)
 
-// --- whitelist the route's `app` export for Fallow ---------------------------
-
-const fallowPath = join(root, ".fallowrc.json")
-const fallow = (await Bun.file(fallowPath).json()) as {
-  ignoreExports?: { file: string; exports: string[] }[]
-}
-fallow.ignoreExports = [
-  ...(fallow.ignoreExports ?? []),
-  { file: `apps/server/src/features/${name}/${name}.routes.ts`, exports: ["app"] },
-]
-await Bun.write(fallowPath, `${JSON.stringify(fallow, null, 2)}\n`)
-console.error("whitelisted routes `app` export in .fallowrc.json")
-
 // --- normalize formatting so the result is lint:ci-clean out of the box ------
 
 Bun.spawnSync(
-  [
-    "bunx",
-    "biome",
-    "check",
-    "--write",
-    "--no-errors-on-unmatched",
-    sliceDir,
-    apiPath,
-    runtimePath,
-    fallowPath,
-  ],
+  ["bunx", "biome", "check", "--write", "--no-errors-on-unmatched", sliceDir, apiPath, runtimePath],
   { cwd: root, stdout: "inherit", stderr: "inherit" },
 )
 

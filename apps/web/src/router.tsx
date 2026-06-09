@@ -4,27 +4,16 @@
  * keeps the template plugin-free; switch to file-based routing once the slice
  * count grows.
  */
-import type { QueryClient } from "@tanstack/react-query"
-import { createRootRouteWithContext, createRouter, Outlet } from "@tanstack/react-router"
-
-export interface RouterContext {
-  readonly queryClient: QueryClient
-}
-
-export const rootRoute = createRootRouteWithContext<RouterContext>()({
-  component: Outlet,
-})
-
-// Imported after rootRoute is defined so child routes can reference it without
-// a circular module-init hazard.
+import { createRouter } from "@tanstack/react-router"
 import { healthRoute } from "./features/health/health.route"
+import { type RouterContext, rootRoute } from "./root-route"
 
 const routeTree = rootRoute.addChildren([healthRoute])
 
-export const createAppRouter = (queryClient: QueryClient) =>
+export const createAppRouter = (context: RouterContext) =>
   createRouter({
     routeTree,
-    context: { queryClient },
+    context,
     defaultPreload: "intent",
   })
 

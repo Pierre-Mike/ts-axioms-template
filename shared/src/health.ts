@@ -1,11 +1,11 @@
 /**
  * The `health` contract — single source of truth for the shape crossing the
- * client/server boundary. One `@effect/schema` Schema yields the runtime codec
- * AND the static type, so server and client can never drift silently: the web
- * client decodes responses with `decodeHealthStatus`, turning any drift into a
- * loud runtime `ParseError` instead of a quiet UI bug.
+ * client/server boundary. One effect `Schema` yields the runtime codec AND the
+ * static type, so server and client can never drift silently: the web client
+ * decodes responses with `decodeHealthStatus`, turning any drift into a loud
+ * runtime `ParseError` instead of a quiet UI bug.
  */
-import { Schema as S } from "@effect/schema"
+import { Schema as S } from "effect"
 
 export const HealthStatus = S.Struct({
   ok: S.Boolean,

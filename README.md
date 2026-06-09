@@ -10,7 +10,7 @@ principle is enforced by a tool — no enforcement, no rule.
 - **Runtime/PM:** [Bun](https://bun.sh) (workspaces, test runner) — no
   npm/yarn, no Turborepo.
 - **Server:** [Hono](https://hono.dev) + [Effect](https://effect.website)
-  (+ `@effect/schema`). Effect lives only at the I/O boundary.
+  (+ built-in `Schema`). Effect lives only at the I/O boundary.
 - **Web (optional):** Vite + React + TanStack Router (UI only) + TanStack Query
   over the typed Hono RPC client (`hc<AppType>`).
 - **E2E (optional):** Playwright, asserting `/health` end-to-end.
@@ -41,7 +41,7 @@ bun run verify     # the four CI gates, one shot
 bun run lint:ci    # biome ci . (+ GritQL purity plugins, openapi freshness in CI)
 bun run typecheck  # tsc -b
 bun run test       # core/test colocation check + co-located unit tests
-bun run audit      # fallow audit (CI adds `bun audit` for vulnerabilities)
+bun run audit      # fallow full-repo scan (CI adds `bun audit` for vulnerabilities)
 ```
 
 These four are the CI jobs (`lint` / `typecheck` / `test` / `audit`) and the
@@ -68,7 +68,7 @@ bun run scaffold:slice <feature>   # core + test + repo + routes, mounted + wire
   the build if they drift.
 - Conventional commits enforced at commit-msg (lefthook); release-please
   automates releases from the history.
-- `openapi.json` is generated from the shared `@effect/schema` contracts and
+- `openapi.json` is generated from the shared effect `Schema` contracts and
   freshness-checked in CI.
 - Toolchain pinned (`.bun-version`, `packageManager`, SHA-pinned actions);
   Renovate auto-merges green minor/patch dev-dep bumps.

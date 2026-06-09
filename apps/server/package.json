@@ -11,9 +11,8 @@
     "start": "bun run src/main.ts"
   },
   "dependencies": {
-    "@effect/schema": "^0.75.5",
     "@ts-axioms/shared": "workspace:*",
-    "effect": "^3.10.0",
+    "effect": "^3.21.0",
     "hono": "^4.6.11"
   },
   "devDependencies": {

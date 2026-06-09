@@ -1,13 +1,13 @@
 /**
  * Typed configuration — the ONLY place the server reads `process.env`.
  *
- * The env is decoded once at module load through an @effect/schema struct, so
+ * The env is decoded once at module load through an effect Schema struct, so
  * a malformed environment fails the boot loudly with a typed ParseError
  * instead of half-working at request time. Biome bans the `process` global
  * everywhere else under apps/server/src (composition root excepted), which
  * makes this funnel an enforced axiom, not a convention.
  */
-import { Schema as S } from "@effect/schema"
+import { Schema as S } from "effect"
 
 const Env = S.Struct({
   PORT: S.optionalWith(S.NumberFromString, { default: () => 8787 }),

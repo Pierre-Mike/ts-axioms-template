@@ -5,7 +5,7 @@
  * apps/server/src/platform/http.ts; extra fields on `error` carry the tag's
  * payload (e.g. `received` on `InvalidVerboseFlag`).
  */
-import { Schema as S } from "@effect/schema"
+import { Schema as S } from "effect"
 
 export const ApiErrorBody = S.Struct({
   ok: S.Literal(false),

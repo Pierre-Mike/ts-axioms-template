@@ -10,7 +10,8 @@
       "!**/.tanstack",
       "!**/.stryker-tmp",
       "!**/.claude/worktrees",
-      "!**/apps/web/src/routeTree.gen.ts"
+      "!**/apps/web/src/routeTree.gen.ts",
+      "!openapi.json"
     ]
   },
   "formatter": {
@@ -61,6 +62,16 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["apps/server/src/main.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
     {
       "includes": [
         "apps/server/src/**",

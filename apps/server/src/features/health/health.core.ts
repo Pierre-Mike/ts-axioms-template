@@ -21,7 +21,7 @@ export interface HealthInput {
 
 /**
  * Build the health payload from already-read inputs. Pure, total. The return
- * shape is the shared `@effect/schema` contract — server and client read the
+ * shape is the shared effect `Schema` contract — server and client read the
  * same type, so the RPC boundary can't drift.
  */
 export const buildStatus = (input: HealthInput): HealthStatus => ({

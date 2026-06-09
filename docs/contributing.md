@@ -11,10 +11,10 @@ Trunk-based flow. `main` is protected (see [governance.md](./governance.md)).
    bun run lint:ci     # biome ci .
    bun run typecheck   # tsc -b
    bun test            # co-located unit tests
-   bun run audit       # fallow audit
+   bun run audit       # fallow full-repo scan
    ```
    The Lefthook `pre-commit` hook auto-formats staged files with Biome and
-   re-stages them; `pre-push` runs `fallow audit` + `tsc -b`.
+   re-stages them; `pre-push` runs the fallow scan + `tsc -b`.
 4. **Open a PR** into `main`. Fill in the PR template checklist.
 5. **Green CI** — the `lint` / `typecheck` / `test` / `audit` checks must pass.
 6. **Squash-merge** — linear history is required; squash on merge.
@@ -24,7 +24,7 @@ Trunk-based flow. `main` is protected (see [governance.md](./governance.md)).
 - Axioms followed — pure core, Effect at the boundary only, named params for
   3+ args, no raw `fetch`/`axios`.
 - Tests co-located (`*.test.ts` next to source, never `__tests__/`).
-- `fallow audit` clean (no dead code, duplication, or circular deps).
+- fallow scan clean (no dead code, duplication, or circular deps).
 
 ## Bypassing hooks (escape hatch)
 

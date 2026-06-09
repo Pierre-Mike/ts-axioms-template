@@ -12,9 +12,10 @@ description: Add a new feature slice to this repo the canonical way. Use when as
    ```
 
    This generates `<feature>.core.ts` / `<feature>.core.test.ts` /
-   `<feature>.repo.ts` / `<feature>.routes.ts`, mounts the route in `api.ts`,
-   registers `<Feature>RepoLive` in `platform/runtime.ts`, and updates
-   `.fallowrc.json`. Never hand-copy the health slice.
+   `<feature>.repo.ts` / `<feature>.routes.ts` / `<feature>.routes.test.ts`,
+   mounts the route in `api.ts` over the shared `appRuntime`, and registers
+   `<Feature>RepoLive` in `platform/runtime.ts`. Never hand-copy the health
+   slice.
 
 2. Implement the real domain logic in `<feature>.core.ts` — PURE: plain data
    in/out, failures as `Either`/`Option`/`Data` tagged unions. No

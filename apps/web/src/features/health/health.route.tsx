@@ -7,7 +7,7 @@
  */
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createRoute } from "@tanstack/react-router"
-import { rootRoute } from "../../router"
+import { rootRoute } from "../../root-route"
 import { healthQuery } from "./health.queries"
 
 function HealthComponent() {

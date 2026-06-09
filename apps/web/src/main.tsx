@@ -10,7 +10,7 @@ import { createRoot } from "react-dom/client"
 import { createAppRouter } from "./router"
 
 const queryClient = new QueryClient()
-const router = createAppRouter(queryClient)
+const router = createAppRouter({ queryClient })
 
 const rootEl = document.getElementById("root")
 if (!rootEl) throw new Error("missing #root element")

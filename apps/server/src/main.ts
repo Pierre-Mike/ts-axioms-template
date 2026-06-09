@@ -12,7 +12,7 @@ const server = Bun.serve({
   idleTimeout: 0,
 })
 
-console.error(`server up: http://localhost:${server.port}`)
+console.log(`server up: http://localhost:${server.port}`)
 
 const shutdown = async (): Promise<void> => {
   server.stop()

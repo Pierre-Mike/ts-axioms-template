@@ -22,9 +22,11 @@ commit-msg:
 pre-push:
   piped: true
   jobs:
-    # Fallow audit (dead code, duplication, circular deps, complexity).
+    # Fallow full-repo audit (dead code, duplication, circular deps,
+    # complexity). Whole-graph, not diff-scoped: dead exports and cycles are
+    # global properties a changed-files view can miss.
     - name: audit
-      run: bunx fallow audit
+      run: bun run audit
     # Type gate across the workspace solution.
     - name: typecheck
       run: tsc -b --noEmit

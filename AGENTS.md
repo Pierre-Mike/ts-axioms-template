@@ -24,7 +24,7 @@ apps/server/src/
   main.ts                    # composition root (Bun.serve, provides live Layers)
 apps/web/                    # optional UI: Vite+React + TanStack Router + Query
 apps/e2e/                    # Playwright; asserts /health end-to-end
-shared/                      # @effect/schema contracts (promote when >=2 apps use)
+shared/                      # effect Schema contracts (promote when >=2 apps use)
 ```
 
 `platform/` is for infra shared across slices (the Effect runtime, typed
@@ -35,7 +35,7 @@ config, HTTP error mapping). Anything feature-specific lives in its slice.
 - **`*.core.ts` is pure.** Failures are values: `Either<E, A>`, `Option`, or
   `Data` tagged unions. Typed errors YES — but **NO** `Effect` / `Layer` /
   `Context` / `ManagedRuntime`, no async, no I/O, no clock. `Either`, `Option`,
-  `Data`, and `Schema` from `effect` / `@effect/schema` are allowed.
+  `Data`, and `Schema` from `effect` are allowed.
 - **`*.repo.ts` / `*.routes.ts` / `main.ts` use Effect.** Services are
   `Context.Tag`s, wiring is `Layer`s, the runtime is a `ManagedRuntime`.
 - **Lift core into Effect at the boundary.** A route reads I/O (impure), calls
@@ -64,7 +64,7 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
   global elsewhere under `apps/server/src` (composition root excepted).
 - **One error shape.** Failures cross HTTP as the shared `ApiErrorBody`
   envelope; map new tags to statuses in `platform/http.ts` `STATUS_BY_TAG`.
-- **Contracts decode at the boundary.** Shared `@effect/schema` contracts live
+- **Contracts decode at the boundary.** Shared effect `Schema` contracts live
   in `shared/src`; the web client decodes responses with the shared
   `decode*` helpers — drift fails loudly. `openapi.json` is generated from the
   same schemas (`bun run openapi:gen`; CI checks freshness).
@@ -77,9 +77,10 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
 
 ## How to add a feature slice
 
-1. `bun run scaffold:slice <feature>` — generates the four slice files in the
-   canonical shape, mounts the route in `api.ts`, registers the live Layer in
-   `platform/runtime.ts`, and updates `.fallowrc.json`. Never hand-copy a slice.
+1. `bun run scaffold:slice <feature>` — generates the slice files in the
+   canonical shape, mounts the route in `api.ts` over the shared `appRuntime`,
+   and registers the live Layer in `platform/runtime.ts`. Never hand-copy a
+   slice.
 2. Implement the real pure logic in `<feature>.core.ts` + its co-located test.
 3. Replace the stub I/O in `<feature>.repo.ts`.
 4. Map new error tags in `platform/http.ts`.
@@ -100,7 +101,7 @@ bun run typecheck      # tsc -b
 bun run test           # core/test colocation check + bun test apps/server shared scripts
 bun run test:e2e       # playwright (apps/e2e; run `bunx playwright install` once)
 bun run test:mutation  # stryker mutation run over *.core.ts (also weekly in CI)
-bun run audit          # bunx fallow audit (dead code / dup / cycles / complexity)
+bun run audit          # fallow full-repo scan (dead code / dup / cycles / complexity)
 bun run openapi:gen    # regenerate openapi.json from the shared schemas
 bun run scaffold:slice # generate a new feature slice
 bun run scaffold:clean # remove apps/web + apps/e2e -> backend-only repo
@@ -108,6 +109,6 @@ bun run dev            # server (:8787) + web (:5173)
 ```
 
 CI job names (`lint` / `typecheck` / `test` / `audit`) are a contract with the
-branch ruleset's required checks — keep them identical. `e2e` and `zizmor` run
-as additional non-required jobs; mutation tests and agent evals run weekly.
+branch ruleset's required checks — keep them identical. `e2e`, `scaffold`, and `zizmor`
+run as additional non-required jobs; mutation tests and agent evals run weekly.
 <!-- axioms:end -->

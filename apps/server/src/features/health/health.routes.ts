@@ -11,7 +11,6 @@
 import { Effect, type ManagedRuntime } from "effect"
 import { Hono } from "hono"
 import { errorEnvelope } from "../../platform/http"
-import { appRuntime } from "../../platform/runtime"
 import { buildStatus, parseVerbose } from "./health.core"
 import { ClockRepo } from "./health.repo"
 
@@ -44,7 +43,3 @@ export const buildHealthApp = (runtime: HealthRouteRuntime) =>
     const { status, verbose } = result.right
     return c.json(verbose ? { ...status, verbose: true } : status)
   })
-
-const app = buildHealthApp(appRuntime)
-
-export { app }

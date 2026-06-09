@@ -102,7 +102,7 @@ and reduces the repo to a backend-only service.
 
 ## `shared/`
 
-Holds `@effect/schema` contracts. Promote a type into `shared/` only when **two
+Holds effect `Schema` contracts. Promote a type into `shared/` only when **two
 or more apps consume it** (e.g. server + web both validate the same DTO). Until
 then keep it in its slice. Shared logic is intended to graduate to versioned
 internal packages as the system grows.

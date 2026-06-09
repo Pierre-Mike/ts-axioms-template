@@ -96,7 +96,10 @@ jobs:
       - run: bun install --frozen-lockfile
       # Known-vulnerability gate over the lockfile.
       - run: bun audit
-      - run: bunx fallow audit
+      # Full-repo fallow scan (dead code / dupes / health). Whole-graph, not
+      # diff-scoped: dead exports and cycles are global properties that a
+      # changed-files audit reports as "0 changed files" on pushes to main.
+      - run: bun run audit
 
   # Optional 5th gate (not in the ruleset's required checks): the Playwright
   # smoke proves the whole vertical slice against real processes.
@@ -125,6 +128,29 @@ jobs:
       - run: bunx playwright install --with-deps chromium
         working-directory: apps/e2e
       - run: bun run test:e2e
+
+  # Scaffolder smoke (not a required check): generate a throwaway slice and
+  # prove the result passes the same gates a contributor would run. Keeps
+  # scripts/scaffold-slice.ts — the canonical "add a feature" path for humans
+  # and agents — from silently rotting as the slice shape evolves.
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: cache bun install
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - run: bun run scaffold:slice smoke-demo
+      - run: bun run verify
 
   # Workflow lint: flags unpinned actions, credential persistence, injection
   # risks. Advisory (not a required check) but visible on every PR.
