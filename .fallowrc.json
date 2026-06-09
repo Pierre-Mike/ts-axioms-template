@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "src/main.ts",
+    "src/main.tsx",
+    "src/index.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "global-setup.ts",
+    "global-teardown.ts",
+    "playwright.config.ts",
+    "vite.config.ts"
+  ],
+  "workspaces": {
+    "packages": ["apps/*", "shared"]
+  },
+  "ignoreExports": [
+    { "file": "apps/server/src/features/health/health.routes.ts", "exports": ["app"] }
+  ],
+  "duplicates": {
+    "minOccurrences": 3
+  },
+  "rules": {}
+}

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/.vite",
+      "!**/.tanstack",
+      "!**/apps/web/src/routeTree.gen.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "asNeeded",
+      "trailingCommas": "all"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "useMaxParams": { "level": "error", "options": { "max": 2 } }
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noConsole": { "level": "error", "options": { "allow": ["error", "warn"] } }
+      },
+      "style": {
+        "useConst": "error",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "fetch": "Use the typed Hono RPC client (hc<AppType>) instead of the global fetch (ts-axioms: no raw fetch)."
+            }
+          }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "axios": {
+                "message": "Use the typed Hono RPC client (hc<AppType>) instead of axios (ts-axioms: no axios)."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.core.ts", "**/*.core.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "effect": {
+                    "importNames": ["Effect", "Layer", "Context", "ManagedRuntime", "Runtime"],
+                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.repo.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["**/*.repo", "**/*.repo.ts", "./*.repo", "../**/*.repo"],
+                    "message": "Functional core must not import imperative-shell I/O services (*.repo). Keep core pure; wire repos in *.routes.ts / main.ts."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

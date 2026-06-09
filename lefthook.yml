@@ -1,0 +1,24 @@
+# Single git-hook runner (replaces husky + lint-staged). Wired by
+# `bun install` -> `prepare` -> `lefthook install`.
+#
+# Bypass everything:  LEFTHOOK=0 git ...   or   git ... --no-verify
+
+pre-commit:
+  piped: true # run in order, abort on first failure
+  jobs:
+    # lint-staged equivalent: auto-fix staged files with Biome, then re-stage
+    # the fixes so they land in the same commit (no second commit).
+    - name: biome
+      glob: "*.{ts,tsx,js,jsx,json,jsonc}"
+      run: bunx biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+
+pre-push:
+  piped: true
+  jobs:
+    # Fallow audit (dead code, duplication, circular deps, complexity).
+    - name: audit
+      run: bunx fallow audit
+    # Type gate across the workspace solution.
+    - name: typecheck
+      run: tsc -b --noEmit

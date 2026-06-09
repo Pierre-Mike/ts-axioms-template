@@ -1,0 +1,12 @@
+{
+  "name": "@ts-axioms/shared",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@effect/schema": "^0.75.5",
+    "effect": "^3.10.0"
+  }
+}

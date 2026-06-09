@@ -1,0 +1,11 @@
+# Default owners for everything in the repo. Replace @your-org/maintainers with
+# the team or users that should review changes. The ruleset's pull_request rule
+# can be switched to require code-owner review by flipping
+# require_code_owner_review to true in .github/rulesets/main.json.
+* @your-org/maintainers
+
+# Governance + tooling plane changes warrant extra scrutiny.
+/.github/        @your-org/maintainers
+/biome.json      @your-org/maintainers
+/lefthook.yml    @your-org/maintainers
+/.fallowrc.json  @your-org/maintainers
