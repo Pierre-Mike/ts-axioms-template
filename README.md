@@ -32,7 +32,7 @@ Full setup (template/degit, branch protection, first slice, backend-only):
 [docs/getting-started.md](./docs/getting-started.md).
 
 > Degit alternative (no history):
-> `bunx degit your-org/ts-axioms-template my-service`
+> `bunx degit Pierre-Mike/ts-axioms-template my-service`
 
 ## Gates
 
@@ -91,3 +91,7 @@ bun run scaffold:slice <feature>   # core + test + repo + routes, mounted + wire
 - [Contributing](./docs/contributing.md) — branch → PR → green CI → squash-merge.
 - [Getting started](./docs/getting-started.md) — from template to first feature.
 - `CLAUDE.md` / `AGENTS.md` — agent operating rules + "add a feature slice" recipe.
+
+## License
+
+[MIT](./LICENSE)

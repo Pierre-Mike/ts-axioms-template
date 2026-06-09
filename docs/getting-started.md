@@ -6,7 +6,7 @@
   repository**. (This repo is marked as a template.)
 - **Or degit** (no git history):
   ```bash
-  bunx degit your-org/ts-axioms-template my-service
+  bunx degit Pierre-Mike/ts-axioms-template my-service
   cd my-service && git init
   ```
 
