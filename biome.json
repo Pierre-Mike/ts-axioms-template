@@ -9,6 +9,7 @@
       "!**/.vite",
       "!**/.tanstack",
       "!**/.stryker-tmp",
+      "!**/.claude/worktrees",
       "!**/apps/web/src/routeTree.gen.ts"
     ]
   },

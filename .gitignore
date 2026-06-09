@@ -9,3 +9,4 @@ test-results
 .DS_Store
 .stryker-tmp
 .evals-wt-*
+.claude/worktrees/
