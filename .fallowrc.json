@@ -14,7 +14,7 @@
     "scripts/*.ts"
   ],
   "workspaces": {
-    "packages": ["apps/*", "shared"]
+    "packages": ["apps/*", "infra", "shared"]
   },
   "duplicates": {
     "minOccurrences": 3

@@ -1,0 +1,8 @@
+name: ts-axioms
+description: Platform-agnostic deploy for the ts-axioms template (pick a target per stack)
+main: src/index.ts
+runtime:
+  name: nodejs
+  options:
+    packagemanager: bun
+    typescript: true

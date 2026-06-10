@@ -1,0 +1,21 @@
+{
+  "name": "@ts-axioms/infra",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "pulumi preview",
+    "up": "pulumi up",
+    "destroy": "pulumi destroy"
+  },
+  "dependencies": {
+    "@pulumi/docker-build": "^0.0.18",
+    "@pulumi/gcp": "^9.26.0",
+    "@pulumi/pulumi": "^3.245.0",
+    "effect": "^3.21.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "fast-check": "^4.8.0"
+  }
+}
