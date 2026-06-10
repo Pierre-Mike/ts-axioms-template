@@ -84,6 +84,9 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+          # fallow audit needs origin/main to diff against; a shallow
+          # checkout has no base ref and fallow >=2.90 fails fast on that.
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
@@ -93,6 +96,9 @@ jobs:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
+      # fallow detects its diff base from the LOCAL main branch; a PR
+      # checkout is a detached merge commit, so materialize it.
+      - run: git branch main origin/main 2>/dev/null || true
       - run: bun install --frozen-lockfile
       # Known-vulnerability gate over the lockfile.
       - run: bun audit
@@ -139,6 +145,9 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+          # `bun run verify` ends in the fallow audit, which needs
+          # origin/main as its diff base (see the audit job).
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
@@ -148,6 +157,8 @@ jobs:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
+      # verify ends in the fallow audit -> needs a local main (see audit job).
+      - run: git branch main origin/main 2>/dev/null || true
       - run: bun install --frozen-lockfile
       - run: bun run scaffold:slice smoke-demo
       - run: bun run verify

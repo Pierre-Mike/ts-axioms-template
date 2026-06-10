@@ -4,6 +4,7 @@
     { "path": "./apps/server" },
     { "path": "./apps/web" },
     { "path": "./apps/e2e" },
+    { "path": "./infra" },
     { "path": "./shared" }
   ]
 }
