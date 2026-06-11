@@ -230,9 +230,7 @@ runtime = runtime.replace(
   /import \{ (\w+RepoLive) \} from "\.\.\/features\/([^\n]*)\n(?![\s\S]*import \{ \w+RepoLive \})/,
   (m) => `${m}import { ${pascal}RepoLive } from "../features/${name}/${name}.repo"\n`,
 )
-runtime = runtime.replace(/Layer\.mergeAll\(([^)]*)\)/, (_, args: string) => {
-  return `Layer.mergeAll(${args.trim()}, ${pascal}RepoLive)`
-})
+runtime = runtime.replace(/Layer\.mergeAll\(([^)]*)\)/, `Layer.mergeAll($1, ${pascal}RepoLive)`)
 await Bun.write(runtimePath, runtime)
 console.error(`registered ${pascal}RepoLive in apps/server/src/platform/runtime.ts`)
 

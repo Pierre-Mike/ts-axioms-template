@@ -32,7 +32,7 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "useMaxParams": { "level": "error", "options": { "max": 2 } }
+        "useMaxParams": { "level": "error", "options": { "max": 1 } }
       },
       "suspicious": {
         "noExplicitAny": "error",

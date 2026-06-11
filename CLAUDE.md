@@ -52,8 +52,9 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
 
 ## Other axioms (each enforced by a tool)
 
-- **Named params for 3+ args.** `useMaxParams` caps positional params at 2 — pass
-  an options object beyond that.
+- **Named params for 2+ args.** `useMaxParams` caps positional params at 1 — pass
+  a single options object beyond that. A one-object interface stays narrow as the
+  implementation deepens.
 - **No raw `fetch`, no `axios`.** `noRestrictedGlobals` bans the `fetch` global;
   `noRestrictedImports` bans `axios`. The web app talks to the server through the
   typed Hono RPC client (`hc<AppType>`) only.
