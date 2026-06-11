@@ -26,6 +26,8 @@
     "scaffold:clean": "bun run scripts/scaffold-clean.ts",
     "infra:preview": "cd infra && pulumi preview",
     "infra:up": "cd infra && pulumi up",
+    "hook:pre-tool-use": "bun .claude/hooks/pre-tool-use.ts",
+    "hook:post-tool-use": "bun .claude/hooks/post-tool-use.ts",
     "prepare": "bunx lefthook install || true"
   },
   "devDependencies": {
