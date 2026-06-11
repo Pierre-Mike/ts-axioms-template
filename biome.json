@@ -127,6 +127,35 @@
                   {
                     "group": ["**/*.repo", "**/*.repo.ts", "./*.repo", "../**/*.repo"],
                     "message": "Functional core must not import imperative-shell I/O services (*.repo). Keep core pure; wire repos in *.routes.ts / main.ts."
+                  },
+                  {
+                    "group": ["../*/*.core", "../*/*.routes"],
+                    "message": "A feature slice must not reach into a sibling slice's internals — depend on its published door (a service Tag + a shared Schema contract promoted to shared/). Modular monolith: modules talk through narrow doors, not back-channels."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/server/src/features/**", "!**/*.core.ts", "!**/*.core.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "axios": {
+                    "message": "Use the typed Hono RPC client (hc<AppType>) instead of axios (ts-axioms: no axios)."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["../*/*.core", "../*/*.repo", "../*/*.routes"],
+                    "message": "A feature slice must not reach into a sibling slice's internals — depend on its published door (a service Tag + a shared Schema contract promoted to shared/). Modular monolith: modules talk through narrow doors, not back-channels."
                   }
                 ]
               }
