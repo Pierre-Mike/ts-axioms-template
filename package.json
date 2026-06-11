@@ -5,6 +5,7 @@
   "packageManager": "bun@1.3.6",
   "workspaces": [
     "apps/*",
+    "infra",
     "shared"
   ],
   "scripts": {
@@ -13,7 +14,7 @@
     "dev:web": "cd apps/web && bun run dev",
     "lint": "biome check --write .",
     "lint:ci": "biome ci .",
-    "test": "bun run scripts/check-colocated-tests.ts && bun test apps/server shared scripts",
+    "test": "bun run scripts/check-colocated-tests.ts && bun test apps/server shared scripts infra",
     "test:e2e": "cd apps/e2e && bunx playwright test",
     "test:mutation": "bunx stryker run",
     "typecheck": "tsc -b",
@@ -23,6 +24,8 @@
     "openapi:check": "bun run scripts/generate-openapi.ts --check",
     "scaffold:slice": "bun run scripts/scaffold-slice.ts",
     "scaffold:clean": "bun run scripts/scaffold-clean.ts",
+    "infra:preview": "cd infra && pulumi preview",
+    "infra:up": "cd infra && pulumi up",
     "prepare": "bunx lefthook install || true"
   },
   "devDependencies": {

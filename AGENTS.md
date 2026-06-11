@@ -25,6 +25,7 @@ apps/server/src/
 apps/web/                    # optional UI: Vite+React + TanStack Router + Query
 apps/e2e/                    # Playwright; asserts /health end-to-end
 shared/                      # effect Schema contracts (promote when >=2 apps use)
+infra/                       # Pulumi (TS): provider-neutral DeployTarget + per-cloud adapters
 ```
 
 `platform/` is for infra shared across slices (the Effect runtime, typed
@@ -75,6 +76,12 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
   Start).
 - **Conventional commits.** `type(scope)?: subject` — the lefthook commit-msg
   hook rejects anything else; release-please builds releases from the history.
+- **Platform-agnostic deploy.** The deploy unit is the container
+  (`apps/server/Dockerfile`); `infra/` is a Pulumi TS program that dispatches
+  to a per-provider `DeployTarget` adapter (`infra/src/registry.ts`; gcp is the
+  reference). Stack config decodes through `infra/src/config.core.ts` — same
+  typed-config-fails-fast axiom as the server. See `infra/README.md` to add a
+  provider.
 
 ## How to add a feature slice
 
@@ -99,13 +106,15 @@ bun run verify         # lint:ci + typecheck + test + audit — the CI gates, on
 bun run lint           # biome check --write .   (autofix)
 bun run lint:ci        # biome ci .              (no writes; CI gate)
 bun run typecheck      # tsc -b
-bun run test           # core/test colocation check + bun test apps/server shared scripts
+bun run test           # core/test colocation check + bun test apps/server shared scripts infra
 bun run test:e2e       # playwright (apps/e2e; run `bunx playwright install` once)
 bun run test:mutation  # stryker mutation run over *.core.ts (also weekly in CI)
 bun run audit          # fallow full-repo scan (dead code / dup / cycles / complexity)
 bun run openapi:gen    # regenerate openapi.json from the shared schemas
 bun run scaffold:slice # generate a new feature slice
 bun run scaffold:clean # remove apps/web + apps/e2e -> backend-only repo
+bun run infra:preview  # pulumi preview (needs pulumi CLI + a configured stack)
+bun run infra:up       # build the server image, push, deploy to the stack's target
 bun run dev            # server (:8787) + web (:5173)
 ```
 
