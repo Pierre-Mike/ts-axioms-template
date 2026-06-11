@@ -77,6 +77,19 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
   Start).
 - **Conventional commits.** `type(scope)?: subject` — the lefthook commit-msg
   hook rejects anything else; release-please builds releases from the history.
+- **Modules talk through doors, not back-channels (modular monolith).** A feature
+  slice may import another slice's *published* door — a service `Context.Tag` plus
+  a `shared/` `Schema` contract — but NEVER its internal files. Biome
+  `noRestrictedImports` bans cross-slice `../*/*.{core,repo,routes}` imports under
+  `features/`; `fallow audit` rejects the cycles a back-channel would create.
+  Promote a contract to `shared/` the moment a second module needs it. The module
+  boundary (the narrow typed door) is independent of the deployment boundary:
+  compose every module's live `Layer` into one process by default (in-process
+  calls, no network). A module becomes a separate deployment only under real
+  pressure (independent scaling, fault/team isolation) — and because consumers
+  depend on the `Tag`, not the implementation, that split swaps a `Layer` at the
+  composition root, not call sites. Design as if distributed; deploy as if
+  together.
 - **Platform-agnostic deploy.** The deploy unit is the container
   (`apps/server/Dockerfile`); `infra/` is a Pulumi TS program that dispatches
   to a per-provider `DeployTarget` adapter (`infra/src/registry.ts`; gcp is the
