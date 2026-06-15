@@ -234,10 +234,35 @@ runtime = runtime.replace(/Layer\.mergeAll\(([^)]*)\)/, `Layer.mergeAll($1, ${pa
 await Bun.write(runtimePath, runtime)
 console.error(`registered ${pascal}RepoLive in apps/server/src/platform/runtime.ts`)
 
+// --- register the generated error tag in platform/http.ts STATUS_BY_TAG ------
+// Deterministic > prose: the slice ships an `Invalid<X>Id` tagged error, so it
+// gets its status here automatically. The check-error-tags gate fails the build
+// for any tag this step (or a hand-added one) leaves unmapped — an unmapped tag
+// would silently fall through to 400.
+
+const httpPath = join(root, "apps/server/src/platform/http.ts")
+let http = await Bun.file(httpPath).text()
+if (!/const STATUS_BY_TAG[^{]*\{/.test(http)) {
+  fail("http.ts anchor not found: expected `const STATUS_BY_TAG ... = {`")
+}
+http = http.replace(/(const STATUS_BY_TAG[^{]*\{\n)/, `$1  Invalid${pascal}Id: 400,\n`)
+await Bun.write(httpPath, http)
+console.error(`registered Invalid${pascal}Id -> 400 in apps/server/src/platform/http.ts`)
+
 // --- normalize formatting so the result is lint:ci-clean out of the box ------
 
 Bun.spawnSync(
-  ["bunx", "biome", "check", "--write", "--no-errors-on-unmatched", sliceDir, apiPath, runtimePath],
+  [
+    "bunx",
+    "biome",
+    "check",
+    "--write",
+    "--no-errors-on-unmatched",
+    sliceDir,
+    apiPath,
+    runtimePath,
+    httpPath,
+  ],
   { cwd: root, stdout: "inherit", stderr: "inherit" },
 )
 
@@ -245,7 +270,8 @@ console.error(`
 next steps:
   1. replace the stub I/O in ${name}.repo.ts with the real thing
   2. grow the pure logic in ${name}.core.ts (+ its co-located test)
-  3. map new error tags to statuses in platform/http.ts STATUS_BY_TAG
+  3. Invalid${pascal}Id is registered in platform/http.ts STATUS_BY_TAG; map any
+     further error tags there too (the check-error-tags gate fails the build otherwise)
   4. (web) add ${name}.queries.ts + ${name}.route.tsx; promote contracts to shared/
   5. bun run openapi:gen   # register the path in scripts/generate-openapi.ts
   6. bun run verify
