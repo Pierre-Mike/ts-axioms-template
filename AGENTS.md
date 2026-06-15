@@ -66,6 +66,10 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
   global elsewhere under `apps/server/src` (composition root excepted).
 - **One error shape.** Failures cross HTTP as the shared `ApiErrorBody`
   envelope; map new tags to statuses in `platform/http.ts` `STATUS_BY_TAG`.
+  `scripts/check-error-tags.ts` (in `bun run test`) fails the build if a core
+  returns an `Either.left` tag absent from `STATUS_BY_TAG` — an unmapped tag
+  would otherwise silently fall through to the `?? 400` default at runtime.
+  `scaffold:slice` registers the tag it generates for you.
 - **Contracts decode at the boundary.** Shared effect `Schema` contracts live
   in `shared/src`; the web client decodes responses with the shared
   `decode*` helpers — drift fails loudly. `openapi.json` is generated from the
@@ -119,7 +123,7 @@ bun run verify         # lint:ci + typecheck + test + audit — the CI gates, on
 bun run lint           # biome check --write .   (autofix)
 bun run lint:ci        # biome ci .              (no writes; CI gate)
 bun run typecheck      # tsc -b
-bun run test           # core/test colocation check + bun test apps/server shared scripts infra
+bun run test           # core/test colocation + error-tag mapping checks + bun test apps/server shared scripts infra
 bun run test:e2e       # playwright (apps/e2e; run `bunx playwright install` once)
 bun run test:mutation  # stryker mutation run over *.core.ts (also weekly in CI)
 bun run audit          # fallow full-repo scan (dead code / dup / cycles / complexity)
