@@ -95,6 +95,14 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
   reference). Stack config decodes through `infra/src/config.core.ts` — same
   typed-config-fails-fast axiom as the server. See `infra/README.md` to add a
   provider.
+- **Agent hooks delegate to `bun run hook:*`.** Claude Code hooks in
+  `.claude/settings.json` never inline a shell or JS body — every hook command
+  is `bun run --silent hook:<event>` (`hook:pre-tool-use`,
+  `hook:post-tool-use`), so the logic lives in one reusable package.json script
+  that any hook event (or a human) can call instead of duplicating it. The
+  PreToolUse guard (`.claude/hooks/pre-tool-use.ts`) refuses `--no-verify`,
+  `git commit -n`, and `LEFTHOOK=0`: the commit-msg / Biome / audit / typecheck
+  gates run on every commit, no bypass.
 
 ## How to add a feature slice
 

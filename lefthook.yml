@@ -27,6 +27,9 @@ pre-push:
     # global properties a changed-files view can miss.
     - name: audit
       run: bun run audit
-    # Type gate across the workspace solution.
+    # Type gate across the workspace solution. Delegates to the same
+    # `bun run typecheck` (`tsc -b`) the CI `typecheck` job runs — one source of
+    # truth. (`tsc -b --noEmit` is illegal in build mode: composite project
+    # references may not disable emit, TS6310.)
     - name: typecheck
-      run: tsc -b --noEmit
+      run: bun run typecheck
