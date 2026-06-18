@@ -30,3 +30,6 @@ pre-push:
     # Type gate across the workspace solution.
     - name: typecheck
       run: tsc -b --noEmit
+    # TDD ordering: every new *.core.ts must have its sibling test by the time it lands.
+    - name: test-first
+      run: bun run scripts/check-test-first.ts

@@ -61,6 +61,11 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
   folder. Every `*.core.ts` MUST have a sibling `*.core.test.ts`
   (`scripts/check-colocated-tests.ts` gates `bun run test`). Use fast-check
   properties for non-trivial pure logic.
+- **Test-first ordering.** A new `*.core.ts` must not land in a branch commit
+  before its sibling `*.core.test.ts`; same-commit is the minimum allowed
+  (`scripts/check-test-first.ts` runs in `bun run test` and `pre-push`).
+  Full red-green-refactor *process* is unverifiable post-squash, but this gate
+  enforces the intent: the test exists by the time the implementation lands.
 - **Typed config at boot.** The server reads `process.env` ONLY in
   `platform/config.ts` (schema-validated, fails fast); Biome bans the `process`
   global elsewhere under `apps/server/src` (composition root excepted).
