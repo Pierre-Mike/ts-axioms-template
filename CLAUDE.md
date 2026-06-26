@@ -96,6 +96,18 @@ any `*.repo` module are banned, the globals `Date` / `process` / `Promise` /
   reference). Stack config decodes through `infra/src/config.core.ts` — same
   typed-config-fails-fast axiom as the server. See `infra/README.md` to add a
   provider.
+- **Evals + retrospective close the loop (the harness improves over time).**
+  Tests/lint verify deterministic code; **evals** verify the non-deterministic
+  half — including the harness itself. A frozen, representative task set
+  (`evals/tasks.jsonl`) is re-run to score whether a change to `.claude/`
+  (CLAUDE.md, skills, hooks, gates) actually made the agent better: score up →
+  keep and ratchet the floor; a sustained drop → revert (judge over several
+  runs against a noise floor, not a single number). `/retro`
+  (`.claude/skills/retro`) is the diagnosis step — it mines `.claude/traces/`,
+  git history, and merged PRs into a few ranked, **enforcement-biased**
+  proposals (prefer a hook/lint/test/script over a guideline; enforcements
+  compound, guidelines decay). Loop: `/retro` proposes → apply → re-run
+  `evals/tasks.jsonl` → keep what raises the score.
 
 ## How to add a feature slice
 
