@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Uptime Agentic-Engineering Harness</title>
+<style>
+  :root {
+    /* Synced visual identity — "factory / verifiable harness" theme: graphite + signal-green */
+    --bg:        #0f1115;
+    --surface:   #171a21;
+    --surface-2: #1f242e;
+    --border:    #2a313d;
+    --text:      #e6e9ef;
+    --muted:     #9aa4b2;
+    --accent:    #3ddc84;   /* signal green = "verified / passing" */
+    --accent-2:  #5aa7ff;   /* blue = "door / swappable layer" */
+    --warn:      #f0a93b;
+    --fail:      #ff5d5d;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --radius: 10px;
+    --maxw: 920px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans);
+         line-height: 1.6; font-size: 16px; }
+  main { max-width: var(--maxw); margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  h1 { font-size: 1.9rem; letter-spacing: -0.02em; margin: 0 0 1rem; }
+  h2 { font-size: 1.35rem; margin: 2.6rem 0 0.8rem; padding-bottom: .4rem;
+       border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.12rem; margin: 1.6rem 0 .5rem; }
+  h4 { font-size: 1rem; margin: 1.1rem 0 .4rem; color: var(--accent-2); }
+  p { color: var(--text); }
+  a { color: var(--accent-2); }
+  code { font-family: var(--mono); font-size: .88em; background: var(--surface-2);
+         padding: .1em .4em; border-radius: 5px; border: 1px solid var(--border); }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 1rem; overflow-x: auto; }
+  pre code { background: none; border: none; padding: 0; font-size: .82rem; line-height: 1.5; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 1rem; }
+  details.meta { margin-top: .6rem; font-size: .85rem; color: var(--muted); }
+  details.meta dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; margin: .6rem 0 0; }
+  details.meta dt { color: var(--accent); font-family: var(--mono); }
+  details.meta dd { margin: 0; word-break: break-word; }
+  section { margin-top: .5rem; }
+  figure { margin: 1.2rem 0; text-align: center; background: var(--surface);
+           border: 1px dashed var(--border); border-radius: var(--radius); padding: 1rem; }
+  figure img { max-width: 100%; height: auto; border-radius: 8px; }
+  figcaption { color: var(--muted); font-size: .85rem; margin-top: .6rem; font-style: italic; }
+  .files ul { list-style: none; padding: 0; }
+  .files li { padding: .35rem 0; border-bottom: 1px solid var(--border); }
+  .tag { font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+         padding: .1em .5em; border-radius: 4px; margin-right: .4rem; }
+  .tag.existing { background: rgba(90,167,255,.15); color: var(--accent-2); border: 1px solid var(--accent-2); }
+  .tag.new { background: rgba(61,220,132,.15); color: var(--accent); border: 1px solid var(--accent); }
+  .phase { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+           padding: 1rem 1.25rem; margin: 1rem 0; }
+  .phase h3 { margin-top: .3rem; }
+  ul.checklist { list-style: none; padding-left: 0; }
+  ul.checklist li { padding: .25rem 0; }
+  .status { color: var(--muted); margin-right: .4rem; }
+  .loop { background: var(--surface-2); border-left: 3px solid var(--accent);
+          padding: .6rem .9rem; border-radius: 6px; margin: .8rem 0; font-size: .9rem; }
+  blockquote { border-left: 3px solid var(--accent-2); margin: 1rem 0; padding: .3rem 1rem;
+               color: var(--muted); background: var(--surface); border-radius: 0 6px 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .9rem; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--surface-2); color: var(--accent); }
+  #notes details, #questionables details, #amendments details {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: .6rem .9rem; margin: .5rem 0; }
+  summary { cursor: pointer; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- ===== HEADER + UPDATABLE METADATA ===== -->
+  <header>
+    <h1>Plan: Uptime Agentic-Engineering Harness</h1>
+    <details class="meta">
+      <summary>Metadata</summary>
+      <dl>
+        <dt>created</dt>      <dd>2026-06-25</dd>
+        <dt>modified</dt>     <dd>2026-06-25</dd>
+        <dt>commits</dt>      <dd></dd>
+        <dt>agent name</dt>   <dd>claude-opus-4-8</dd>
+        <dt>session id</dt>   <dd>b25c8afe</dd>
+        <dt>back refs</dt>    <dd>Day_1_v3.docx — "The New SDLC With Vibe Coding: From ad-hoc prompting to Agentic Engineering" (Osmani, Saboo, Kartakis, May 2026)</dd>
+        <dt>forward refs</dt> <dd>Day 3 — Context Engineering: Sessions, Skills &amp; Memory; Day 5 — Spec-Driven Production-Grade Development</dd>
+      </dl>
+    </details>
+  </header>
+
+  <!-- Hero image — synced to the :root visual identity. Replace with <img> once generated. -->
+  <figure>
+    <!-- {{HERO_IMAGE: a minimal factory assembly-line diagram — "Model + Harness = Agent" with a verification gate stamping PASS in signal-green; graphite background. <=10 words of text}} -->
+    <figcaption>Agent = Model + Harness. The harness is the team's surface area.</figcaption>
+  </figure>
+
+  <!-- ===== PURPOSE / PROBLEM / SOLUTION ===== -->
+  <section id="purpose">
+    <h2>Purpose</h2>
+    <p>Turn <code>ts-axioms-template</code> into a verifiable agentic-engineering factory: AI implements
+    inside enforced specs, tests, and <strong>evals</strong>, while the engineer owns architecture and
+    judgment — so AI-built features ship to production reliably (high uptime, low OpEx) instead of
+    accruing vibe-coding debt. The repo already enforces the deterministic half of the discipline
+    (tests, lint, module boundaries, hooks). This plan adds the missing non-deterministic half and the
+    operational surface around it.</p>
+  </section>
+
+  <section id="problem">
+    <h2>Problem</h2>
+    <p>Per the Day 1 paper, the line between vibe coding and agentic engineering is <em>how outputs get
+    verified</em>: <strong>tests</strong> verify deterministic parts, <strong>evals</strong> (labelled
+    datasets, rubrics, LM judges) verify non-deterministic parts. Without both, it is still vibe coding.
+    This repo has tests but <strong>no eval harness</strong>, <strong>no agent observability</strong>,
+    <strong>no model-routing policy</strong>, and <strong>no explicit vibe↔agentic boundary</strong>.
+    Any future LLM/agent feature would ship ungraded — the precise failure mode (silent conceptual
+    errors, the "80% problem", high token OpEx) the paper warns against.</p>
+    <figure>
+      <!-- {{PROBLEM_IMAGE: split panel — left "deterministic: tests PASS" green, right "non-deterministic: ungraded ?" amber; one missing gate highlighted}} -->
+      <figcaption>Half the verification surface is missing: non-deterministic output ships ungraded.</figcaption>
+    </figure>
+  </section>
+
+  <section id="solution">
+    <h2>Solution</h2>
+    <p><strong>Two distinct eval tracks — don't conflate them.</strong> The eval target depends on
+    what you're building:</p>
+    <ul>
+      <li><strong>Track A — Harness evals (PRIMARY; this is what improves the template over time).</strong>
+      The "agent" is Claude Code building features in this repo. You can't eval the next unknown feature,
+      so you don't try — you eval the <em>harness</em> against a <strong>frozen, representative task set</strong>
+      (<code>evals/tasks.jsonl</code>: "add a slice", "fix this bug", "do this migration"). Re-run it on every
+      change to <code>.claude/</code>; a better score predicts better performance on future unknown features
+      (same logic as Terminal Bench). <code>/retro</code> is the diagnosis step that proposes the changes; the
+      frozen task set is the scoreboard that says which proposals actually generalized.</li>
+      <li><strong>Track B — Product-agent evals.</strong> Only when the feature you ship <em>is</em> an agent
+      (support bot, research assistant). Target = that agent's outputs, graded by a provider-agnostic
+      <code>JudgeClient</code> against a feature-specific dataset + rubric.</li>
+    </ul>
+    <p>Both tracks are shipped as <em>template capabilities</em> (pure core + Effect shell + CI job + docs),
+    gated by CI like every other axiom. Every external dependency is a <strong>published door</strong>
+    (a <code>Context.Tag</code> + a <code>shared/</code> Schema contract) with swappable Layers, mirroring
+    the existing <code>DeployTarget</code> registry. The LM judge is provider-agnostic: Anthropic is the
+    reference adapter; Pi / OpenAI / local drop in via one Layer swap at the composition root.</p>
+    <p>Capabilities:</p>
+    <ol>
+      <li><strong>Harness-eval loop</strong> (Track A) — <code>evals/tasks.jsonl</code> frozen benchmark + <code>/retro</code> diagnosis + ratcheting score.</li>
+      <li><strong>Product-eval harness</strong> (Track B) — provider-agnostic <code>JudgeClient</code>, pure rubric scoring, threshold-based CI.</li>
+      <li><strong>Coverage gate + scaffolder</strong> — agentic slices must carry a dataset + rubric (opt-in by import scan).</li>
+      <li><strong>Observability</strong> — OpenTelemetry spans (tokens/latency/cost) through a swappable exporter Layer.</li>
+      <li><strong>Model routing</strong> — pure phase→tier policy (frontier for architecture, cheap for test-gen/review).</li>
+      <li><strong>Vibe↔agentic gate</strong> — explicit boundary doc + new canon axiom blocks.</li>
+    </ol>
+    <figure>
+      <!-- {{SOLUTION_IMAGE: four stacked layers feeding a "continuous quality flywheel" loop: eval -> cluster -> fix -> regress -> monitor; doors shown as blue swappable plugs}} -->
+      <figcaption>Four additive layers + the continuous quality flywheel, all behind swappable doors.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ===== RELEVANT FILES ===== -->
+  <section id="files" class="files">
+    <h2>Relevant Files</h2>
+
+    <h3>Existing Files</h3>
+    <ul>
+      <li><span class="tag existing">existing</span> <code>infra/src/target.ts</code> + <code>registry.ts</code> — reference door/registry pattern to mirror for <code>JudgeClient</code> and the OTel exporter.</li>
+      <li><span class="tag existing">existing</span> <code>apps/server/src/platform/config.ts</code> — the ONLY place <code>process.env</code> is read; judge API keys + OTLP endpoint decode here.</li>
+      <li><span class="tag existing">existing</span> <code>apps/server/src/platform/runtime.ts</code> — composition root; live judge/exporter Layers selected here.</li>
+      <li><span class="tag existing">existing</span> <code>apps/server/src/platform/http.ts</code> — <code>STATUS_BY_TAG</code>; map any new eval error tags.</li>
+      <li><span class="tag existing">existing</span> <code>scripts/check-colocated-tests.ts</code> — exact template for the new <code>check-eval-coverage.ts</code> gate.</li>
+      <li><span class="tag existing">existing</span> <code>scripts/docs-sync.test.ts</code> — gates CLAUDE.md ≡ AGENTS.md byte-identity; new axiom blocks must satisfy it.</li>
+      <li><span class="tag existing">existing</span> <code>scripts/scaffold-slice.ts</code> — extend to ask deterministic vs agentic and emit eval stubs.</li>
+      <li><span class="tag existing">existing</span> <code>CLAUDE.md</code> + <code>AGENTS.md</code> — add two axiom blocks (evals, routing), edited together.</li>
+      <li><span class="tag existing">existing</span> <code>package.json</code> — add <code>eval</code>, <code>eval:coverage</code>, <code>harness:eval</code> scripts; wire into <code>test</code>/CI.</li>
+      <li><span class="tag existing">existing</span> <code>.claude/skills/retro/SKILL.md</code> — SHIPPED in the template; the diagnosis step of the harness-eval loop (mines traces/git/PRs → ranked enforcement-biased proposals).</li>
+    </ul>
+
+    <h3>New Files</h3>
+    <ul>
+      <li><span class="tag new">new</span> <code>evals/tasks.jsonl</code> — Track A: frozen, representative harness benchmark (locked; never edited to chase a score).</li>
+      <li><span class="tag new">new</span> <code>shared/src/judge.ts</code> — <code>Verdict</code> Schema contract (the door's data shape).</li>
+      <li><span class="tag new">new</span> <code>apps/server/src/platform/evals/eval.core.ts</code> (+ <code>.core.test.ts</code>) — PURE rubric apply + score aggregation.</li>
+      <li><span class="tag new">new</span> <code>apps/server/src/platform/evals/judge.ts</code> — <code>JudgeClient</code> Tag + Layers (Anthropic reference, Fake for tests).</li>
+      <li><span class="tag new">new</span> <code>apps/server/src/platform/evals/eval.runner.ts</code> — Effect shell: load dataset → judge → emit.</li>
+      <li><span class="tag new">new</span> <code>apps/server/src/platform/evals/datasets/&lt;feature&gt;.jsonl</code> — labelled rows.</li>
+      <li><span class="tag new">new</span> <code>apps/server/src/platform/evals/rubrics/&lt;feature&gt;.ts</code> — typed rubric (5 dimensions).</li>
+      <li><span class="tag new">new</span> <code>apps/server/src/platform/observability/otel.ts</code> + <code>README.md</code> — spans/meters + swappable exporter Layer.</li>
+      <li><span class="tag new">new</span> <code>apps/server/src/platform/routing/model-routing.core.ts</code> (+ <code>.core.test.ts</code>) + <code>README.md</code> — phase→tier policy.</li>
+      <li><span class="tag new">new</span> <code>scripts/check-eval-coverage.ts</code> — gate: a slice importing a judge/agent door MUST have a dataset + rubric.</li>
+      <li><span class="tag new">new</span> <code>docs/vibe-vs-agentic.md</code> — explicit prototype-vs-production boundary in repo terms.</li>
+    </ul>
+  </section>
+
+  <!-- ===== IMPLEMENTATION PHASES ===== -->
+  <section id="phases">
+    <h2>Implementation Phases</h2>
+    <p><strong>IMPORTANT:</strong> Execute every phase and task step by step, in order, top to bottom.</p>
+    <p>Status markers: <code>[]</code> idle · <code>[wip]</code> in progress · <code>[x]</code> complete · <code>[f]</code> failed. All start as <code>[]</code>; the Build Plan workflow updates them as it works.</p>
+    <p><strong>Phase 1 is Track A (harness evals — the loop that improves the template itself) and is the priority.</strong> Phases 2–6 build Track B (product-agent evals) and the surrounding capabilities; they matter when a shipped feature <em>is</em> an agent.</p>
+
+    <!-- ===================== PHASE 1 (TRACK A) ===================== -->
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 1: Harness-eval loop — frozen task set + /retro + ratcheting score</h3>
+      <p><strong>Track A.</strong> Make "is the template getting better?" a number that climbs. You don't eval
+      the next unknown feature; you eval the harness against a locked benchmark, and let <code>/retro</code>
+      propose the changes the benchmark then judges.</p>
+      <figure>
+        <!-- {{PHASE_IMAGE: closed loop — /retro proposes -> apply .claude change -> run frozen tasks.jsonl -> Δscore -> keep if up / revert if down; signal-green arrows}} -->
+        <figcaption>/retro proposes, the frozen task set scores, the floor ratchets up.</figcaption>
+      </figure>
+
+      <h4>1. Build the frozen benchmark</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Create <code>evals/tasks.jsonl</code>: ~10–20 representative jobs ("scaffold a slice with X", "fix bug Y", "do migration Z"), each with a label/expected outcome. Locked — never edited to chase a score.</li>
+        <li><code class="status">[]</code> Define a harness rubric: gates passed? right files touched? trajectory sane? retries within budget? (reuse the 5-dimension <code>Verdict</code> shape from Phase 2).</li>
+      </ul>
+
+      <h4>2. Runner + noise floor</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>harness:eval</code> script: run each task (headless <code>claude -p</code> or the harness-autoagent runner) → grade → aggregate. Run each task N times; report mean ± σ.</li>
+        <li><code class="status">[]</code> Ratchet logic: a change keeps only if mean improves beyond the noise floor (mean ± σ); a sustained drop → flag for revert. Single-run wiggle = noise, ignored.</li>
+      </ul>
+
+      <h4>3. Wire /retro as the diagnosis step</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Confirm <code>.claude/skills/retro/SKILL.md</code> is shipped (done). It mines <code>.claude/traces/</code>, git, PRs → ranked, enforcement-biased proposals.</li>
+        <li><code class="status">[]</code> Document the loop in <code>evals/README.md</code>: <code>/retro</code> proposes → apply one change → re-run <code>harness:eval</code> → keep what raises the score → ratchet floor.</li>
+        <li><code class="status">[]</code> Optional: weekly <code>/retro</code> + harness:eval schedule (the skill's "Headless / cron use" section).</li>
+      </ul>
+
+      <h4>4. Testing Strategy</h4>
+      <p>The benchmark must run reproducibly and the ratchet must reject noise. Validate the loop end-to-end on one real <code>/retro</code> proposal.</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bun run harness:eval</code> — produces a mean±σ score over the frozen set.</li>
+        <li><code class="status">[]</code> Apply one trivial harness change, re-run → score delta is computed and ratchet decision is correct.</li>
+        <li><code class="status">[]</code> <code>/retro</code> on the repo emits a ranked proposal citing real signal.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <!-- ===================== PHASE 2 (TRACK B) ===================== -->
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 2: Product-eval harness — provider-agnostic JudgeClient + pure scoring</h3>
+      <p>Add the non-deterministic verification half. Keep the impureim sandwich: I/O (the model call)
+      lives behind a Tag in the shell; scoring is pure and unit-tested offline.</p>
+      <figure>
+        <!-- {{PHASE_IMAGE: runner -> JudgeClient(Tag) -> [Anthropic|Pi|Fake] plugs; verdict data -> pure eval.core scoring -> aggregate >= floor}} -->
+        <figcaption>The judge is a door; scoring stays pure and deterministic.</figcaption>
+      </figure>
+
+      <h4>1. Define the door contract</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Add <code>shared/src/judge.ts</code>: <code>Verdict</code> Schema — per-dimension scores (taskSuccess, toolUse, trajectory, hallucination, quality), each <code>0..1</code>, plus model id + rationale string.</li>
+        <li><code class="status">[]</code> Promote to <code>shared/</code> because both runner and core consume it (contracts-at-the-boundary axiom).</li>
+      </ul>
+
+      <h4>2. Implement the JudgeClient door + adapters</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>platform/evals/judge.ts</code>: <code>class JudgeClient extends Context.Tag(...)</code> with <code>grade(opts: {input; output; rubric}) =&gt; Effect&lt;Verdict, JudgeError&gt;</code> (one options object — <code>useMaxParams</code> axiom).</li>
+        <li><code class="status">[]</code> <code>AnthropicJudgeLive</code> (reference) using <code>@anthropic-ai/sdk</code> (own transport — respects the <code>fetch</code> ban), <code>temperature: 0</code>, pinned model id from config.</li>
+        <li><code class="status">[]</code> <code>FakeJudgeLive</code> returning a fixed verdict for tests; document the <code>PiJudgeLive</code>/<code>OpenAIJudgeLive</code> extension point in a header comment (mirror <code>registry.ts</code>).</li>
+        <li><code class="status">[]</code> Add <code>JUDGE_API_KEY</code> + <code>JUDGE_MODEL</code> to <code>platform/config.ts</code> Schema (typed-config-fails-fast).</li>
+        <li><code class="status">[]</code> Map <code>JudgeError</code> in <code>platform/http.ts</code> <code>STATUS_BY_TAG</code>.</li>
+      </ul>
+
+      <h4>3. Pure scoring core</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>eval.core.ts</code>: takes <code>Verdict[]</code> as data → applies rubric weights → returns <code>{ perDimension, aggregate, pass }</code>. NO Effect/async/I/O.</li>
+        <li><code class="status">[]</code> <code>pass = aggregate &gt;= floor AND every dimension &gt;= its per-dim minimum</code> (catches one catastrophic row).</li>
+        <li><code class="status">[]</code> <code>eval.core.test.ts</code>: fast-check properties on the aggregation math (monotonic, bounded 0..1, floor logic).</li>
+      </ul>
+
+      <h4>4. Runner shell + first dataset</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>eval.runner.ts</code>: load <code>datasets/*.jsonl</code> → <code>yield* JudgeClient.grade</code> per row → feed verdicts to <code>eval.core</code> → emit result; stamp model id.</li>
+        <li><code class="status">[]</code> Seed a tiny example dataset + rubric so the suite runs green out of the box.</li>
+        <li><code class="status">[]</code> Add <code>"eval": "bun apps/server/src/platform/evals/eval.runner.ts"</code> to <code>package.json</code>.</li>
+      </ul>
+
+      <h4>5. Testing Strategy</h4>
+      <p>Unit-test pure scoring with fast-check (offline, no network). Run the runner against the seed dataset using <code>FakeJudgeLive</code> so CI needs no API key. Real-judge runs are opt-in (key present).</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bun run test</code> — co-located test gate passes; <code>eval.core.test.ts</code> green.</li>
+        <li><code class="status">[]</code> <code>bun run eval</code> (FakeJudge) — seed suite scores ≥ floor, exits 0.</li>
+        <li><code class="status">[]</code> <code>bun run typecheck</code> — door + Layers type-complete.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong> If any command fails, fix the cause and re-run.</div>
+    </div>
+
+    <!-- ===================== PHASE 2 ===================== -->
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 3: Coverage gate + scaffolder integration</h3>
+      <p>Make evals enforced, not documented — but only for features that actually need them. Detection is a deterministic static import scan, never a heuristic.</p>
+      <figure>
+        <!-- {{PHASE_IMAGE: decision flow — slice imports JudgeClient/agent door? no->skip(CRUD); yes->has dataset+rubric? no->FAIL}} -->
+        <figcaption>Opt-in by import: agentic slices must carry a dataset + rubric.</figcaption>
+      </figure>
+
+      <h4>1. The coverage gate</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>scripts/check-eval-coverage.ts</code> (clone <code>check-colocated-tests.ts</code> structure): scan slices; if a slice imports a judge/agent door and has no sibling dataset + rubric → fail with a pointer.</li>
+        <li><code class="status">[]</code> Wire into the <code>test</code> script chain; start <strong>non-blocking</strong> (warn) then flip to hard-fail once seeded.</li>
+      </ul>
+
+      <h4>2. Scaffolder</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Extend <code>scripts/scaffold-slice.ts</code>: prompt/flag deterministic vs agentic; agentic → generate <code>datasets/&lt;feature&gt;.jsonl</code> + <code>rubrics/&lt;feature&gt;.ts</code> stubs so coverage passes by construction.</li>
+        <li><code class="status">[]</code> Add a step to "How to add a feature slice" (both canon files) covering eval stubs.</li>
+      </ul>
+
+      <h4>3. Testing Strategy</h4>
+      <p>Verify the gate both ways: a CRUD-only slice passes; an agentic slice missing a rubric fails.</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bun run eval:coverage</code> — passes on current repo (health slice is deterministic).</li>
+        <li><code class="status">[]</code> Temporarily add a judge import to a throwaway slice → gate fails; remove it → passes.</li>
+        <li><code class="status">[]</code> <code>bun run scaffold:slice demo-agentic --agentic</code> → generated slice passes coverage immediately; then revert.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <!-- ===================== PHASE 3 ===================== -->
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 4: Observability — vendor-neutral OTel</h3>
+      <p>Emit tokens/latency/cost as OpenTelemetry through a swappable exporter Layer. Console exporter is the reference; any OTLP collector (Langfuse/GCP/Datadog/Grafana) is an adapter.</p>
+      <figure>
+        <!-- {{PHASE_IMAGE: agent/judge call -> OTel span(tokens,latency,cost) -> exporter plug: ConsoleExporterLive | OTLPExporterLive -> collector}} -->
+        <figcaption>One neutral OTel interface; backends are swappable adapters.</figcaption>
+      </figure>
+
+      <h4>1. Instrumentation</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>platform/observability/otel.ts</code>: span per agent/judge call with <code>tokens.in/out</code>, <code>latency.ms</code>, <code>cost.usd</code> attributes; expose as an Effect Layer.</li>
+        <li><code class="status">[]</code> Exporter door: <code>ConsoleExporterLive</code> (default, zero-config) + <code>OTLPExporterLive</code> (endpoint from config); swap at <code>runtime.ts</code>.</li>
+        <li><code class="status">[]</code> Wrap <code>JudgeClient.grade</code> in a span so eval runs are observable.</li>
+        <li><code class="status">[]</code> <code>OTLP_ENDPOINT</code> optional in <code>platform/config.ts</code>; absent → console.</li>
+      </ul>
+
+      <h4>2. Drift signal</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Document a drift query (score/cost trend over runs) in <code>observability/README.md</code>; no bespoke pipeline.</li>
+      </ul>
+
+      <h4>3. Testing Strategy</h4>
+      <p>Spans must emit with correct attributes under the console exporter; absent OTLP endpoint must not crash boot.</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bun run eval</code> — console exporter prints a span with token/latency/cost.</li>
+        <li><code class="status">[]</code> <code>bun run typecheck</code> — exporter Layers type-complete.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <!-- ===================== PHASE 4 ===================== -->
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 5: Model routing — phase→tier policy</h3>
+      <p>Pure mapping from SDLC phase to model tier: frontier for requirements/architecture/initial implementation; smaller/cheaper for test-gen, code review, CI monitoring. Drives down token OpEx.</p>
+      <figure>
+        <!-- {{PHASE_IMAGE: simple table-as-diagram phase->tier: architecture=frontier, test-gen/review=cheap; arrow "lower OpEx"}} -->
+        <figcaption>Right model for the right phase — the factory's cost lever.</figcaption>
+      </figure>
+
+      <h4>1. Policy core</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>routing/model-routing.core.ts</code>: pure <code>routeFor(opts: {phase}) =&gt; ModelTier</code> with a typed phase union; NO I/O.</li>
+        <li><code class="status">[]</code> <code>model-routing.core.test.ts</code>: exhaustive table test over every phase.</li>
+        <li><code class="status">[]</code> <code>routing/README.md</code>: tier table + how the judge/agent layers consume it.</li>
+      </ul>
+
+      <h4>2. Testing Strategy</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bun run test</code> — routing core fully covered; co-location gate passes.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <!-- ===================== PHASE 5 ===================== -->
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 6: Canon axioms, boundary doc &amp; CI wiring</h3>
+      <p>Encode the new capabilities as enforced axioms and an explicit prototype-vs-production boundary; keep required CI check names untouched.</p>
+      <figure>
+        <!-- {{PHASE_IMAGE: CLAUDE.md == AGENTS.md byte-identical, two new axiom blocks; required checks unchanged, new non-required eval jobs added}} -->
+        <figcaption>New axioms land in the byte-identical canon; required check names stay frozen.</figcaption>
+      </figure>
+
+      <h4>1. Canon axioms (edit both files together)</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Add axiom block: <em>"Evals + retrospective close the loop"</em> — covers <code>evals/tasks.jsonl</code> harness evals, the ratcheting score, and <code>/retro</code> as the diagnosis step. <strong>DONE</strong> (landed in both CLAUDE.md/AGENTS.md; <code>docs-sync.test.ts</code> green).</li>
+        <li><code class="status">[]</code> Add axiom block: <em>"Model routing — tier per SDLC phase via the pure routing core."</em></li>
+        <li><code class="status">[]</code> Add the eval-stub step to "How to add a feature slice".</li>
+        <li><code class="status">[]</code> Add pointer to <code>docs/vibe-vs-agentic.md</code>.</li>
+      </ul>
+
+      <h4>2. Boundary doc + CI</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>docs/vibe-vs-agentic.md</code>: branch/env naming, what may ship from where (prototype vs production gate).</li>
+        <li><code class="status">[]</code> Add non-required CI jobs <code>eval</code> + <code>eval-coverage</code> (additive, like <code>e2e</code>/<code>zizmor</code>); leave required names <code>lint/typecheck/test/audit</code> unchanged.</li>
+        <li><code class="status">[]</code> Add a weekly (mutation-style) full eval regression schedule.</li>
+      </ul>
+
+      <h4>3. Testing Strategy</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bun run test</code> — <code>docs-sync.test.ts</code> confirms CLAUDE.md ≡ AGENTS.md.</li>
+        <li><code class="status">[]</code> <code>bun run verify</code> — full gate chain green end-to-end.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+  </section>
+
+  <!-- ===== GLOBAL VALIDATION ===== -->
+  <section id="validation">
+    <h2>Validation Commands</h2>
+    <p>Execute these to validate the entire plan is complete:</p>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>bun run verify</code> — lint:ci + typecheck + test + audit, one shot (the CI gates).</li>
+      <li><code class="status">[]</code> <code>bun run harness:eval</code> — Track A: frozen <code>evals/tasks.jsonl</code> produces a mean±σ score; ratchet decision correct.</li>
+      <li><code class="status">[]</code> <code>/retro</code> — emits a ranked, enforcement-biased proposal citing real signal.</li>
+      <li><code class="status">[]</code> <code>bun run eval</code> — Track B eval suite scores ≥ floor under FakeJudge; emits an OTel span.</li>
+      <li><code class="status">[]</code> <code>bun run eval:coverage</code> — every agentic slice carries a dataset + rubric.</li>
+      <li><code class="status">[]</code> <code>bun run scaffold:slice demo-agentic --agentic</code> then <code>bun run eval:coverage</code> — scaffolded agentic slice passes by construction (revert after).</li>
+      <li><code class="status">[]</code> Manual: swap <code>AnthropicJudgeLive</code> → <code>FakeJudgeLive</code> at <code>runtime.ts</code> with zero call-site changes (proves the door).</li>
+    </ul>
+    <div class="loop">🔁 <strong>The plan is not complete until every box is checked and every command passes. If a step is not possible, mark it <code>[f]</code> and move on if possible.</strong></div>
+  </section>
+
+  <!-- ===== NOTES ===== -->
+  <section id="notes">
+    <h2>Notes</h2>
+
+    <h3>Why this maps to the Day 1 paper</h3>
+    <table>
+      <tr><th>Paper concept</th><th>This plan / repo</th></tr>
+      <tr><td>Agent = Model + Harness; most failures are config failures</td><td>Invest in harness layers, not model swaps</td></tr>
+      <tr><td>Tests verify deterministic; Evals verify non-deterministic</td><td>Phase 1 eval harness + Phase 2 coverage gate</td></tr>
+      <tr><td>Open standards (MCP/A2A); swappable providers</td><td>Provider-agnostic <code>JudgeClient</code>; OTel exporter door</td></tr>
+      <tr><td>Continuous quality flywheel</td><td>eval → cluster → fix → regress → monitor (weekly run + drift query)</td></tr>
+      <tr><td>Intelligent model routing (TCO / token economy)</td><td>Phase 4 pure phase→tier policy</td></tr>
+      <tr><td>Distinguish prototyping from production</td><td>Phase 5 <code>docs/vibe-vs-agentic.md</code> boundary</td></tr>
+      <tr><td>Context engineering as financial lever; static vs dynamic</td><td>Dense canon (static) + skills (dynamic) already in repo</td></tr>
+    </table>
+
+    <h3>Decision log (from /align session)</h3>
+    <ul>
+      <li><strong>D1 — Judge dependency:</strong> Effect service behind a Tag in the runner; scoring pure in core. Provider-agnostic — Anthropic reference, Pi/OpenAI swap at composition root. <em>Rejected:</em> SDK in core (breaks pure-core axiom), raw <code>fetch</code> (violates <code>noRestrictedGlobals</code>), heuristic-only (can't grade trajectory/quality).</li>
+      <li><strong>D2 — Determinism:</strong> threshold scoring over labelled data, judge pinned + temp 0, per-dim floors; track trend weekly. <em>Rejected:</em> exact-match (brittle), block-from-day-one (flake erodes trust), average-only (hides a catastrophic row).</li>
+      <li><strong>D3 — Coverage trigger:</strong> opt-in by static import scan (slice imports a judge/agent door ⇒ must have dataset+rubric). <em>Rejected:</em> content heuristic (noisy), gate-everything (friction), honor-system doc (no enforcement).</li>
+      <li><strong>D4 — Observability backend:</strong> OTel + swappable exporter Layer; console reference, OTLP adapter. <em>Rejected:</em> hard-wire one SaaS (lock-in), custom log format (reinvents OTel), logs-only (no drift signal).</li>
+    </ul>
+
+    <h3>Dependencies &amp; constraints</h3>
+    <ul>
+      <li>New deps (add via <code>bun add</code>): <code>@anthropic-ai/sdk</code> (judge reference adapter), <code>@opentelemetry/api</code> + an OTLP exporter pkg. Each provider adapter respects the <code>fetch</code> ban via its own SDK.</li>
+      <li>All secrets/endpoints read ONLY in <code>platform/config.ts</code> (typed-config-fails-fast).</li>
+      <li>Required CI check names (<code>lint/typecheck/test/audit</code>) are a contract with the branch ruleset — never rename.</li>
+    </ul>
+
+    <h3>Future work</h3>
+    <ul>
+      <li>Day 3 follow-up: sessions/skills/memory as first-class dynamic context.</li>
+      <li>Day 5 follow-up: spec-driven production-grade dev + code review at scale (bundled summaries, conditional LGTM).</li>
+      <li>Ratchet the eval floor and flip <code>eval</code>/<code>eval-coverage</code> to required once trusted.</li>
+    </ul>
+
+    <figure>
+      <!-- {{NOTES_IMAGE: the continuous quality flywheel as a closed loop, signal-green arrows, 5 nodes labelled evaluate/diagnose/optimize/verify/monitor}} -->
+      <figcaption>The quality flywheel each cycle compounds — the paper's core operating loop.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ===== AMENDMENTS ===== -->
+  <section id="amendments">
+    <h2>Amendments</h2>
+    <details open>
+      <summary>2026-06-26 — Re-scoped around two eval tracks; shipped <code>/retro</code>; landed canon axiom</summary>
+      <p>Split evals into <strong>Track A (harness evals)</strong> — the frozen <code>evals/tasks.jsonl</code>
+      benchmark + <code>/retro</code> diagnosis + ratcheting score that improves the template itself — and
+      <strong>Track B (product-agent evals)</strong> for when a shipped feature is an agent. Promoted the
+      harness-eval loop to Phase 1; renumbered the rest (2–6). Copied the project-agnostic <code>retro</code>
+      skill into the template at <code>.claude/skills/retro/SKILL.md</code>. Added the
+      <em>"Evals + retrospective close the loop"</em> axiom to both <code>CLAUDE.md</code> and
+      <code>AGENTS.md</code> (byte-identical; <code>scripts/docs-sync.test.ts</code> passes).</p>
+    </details>
+  </section>
+
+</main>
+</body>
+</html>
