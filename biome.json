@@ -27,13 +27,11 @@
       "trailingCommas": "all"
     }
   },
+  "plugins": ["./biome-plugins/max-one-param-declarations.grit"],
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
-      "complexity": {
-        "useMaxParams": { "level": "error", "options": { "max": 1 } }
-      },
       "suspicious": {
         "noExplicitAny": "error",
         "noConsole": { "level": "error", "options": { "allow": ["error", "warn"] } }
@@ -44,7 +42,7 @@
           "level": "error",
           "options": {
             "deniedGlobals": {
-              "fetch": "Use the typed Hono RPC client (hc<AppType>) instead of the global fetch (ts-axioms: no raw fetch)."
+              "fetch": "web: use the typed Hono RPC client (hc<AppType>); server: do external I/O inside a *.io.ts service, where fetch is allowed."
             }
           }
         },
@@ -85,7 +83,24 @@
               "level": "error",
               "options": {
                 "deniedGlobals": {
-                  "fetch": "Use the typed Hono RPC client (hc<AppType>) instead of the global fetch (ts-axioms: no raw fetch).",
+                  "fetch": "web: use the typed Hono RPC client (hc<AppType>); server: do external I/O inside a *.io.ts service, where fetch is allowed.",
+                  "process": "Read configuration through platform/config.ts — the one typed, schema-validated env funnel (ts-axioms: typed config at boot)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/server/src/**/*.io.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
                   "process": "Read configuration through platform/config.ts — the one typed, schema-validated env funnel (ts-axioms: typed config at boot)."
                 }
               }
@@ -104,10 +119,10 @@
               "level": "error",
               "options": {
                 "deniedGlobals": {
-                  "fetch": "Use the typed Hono RPC client (hc<AppType>) instead of the global fetch (ts-axioms: no raw fetch).",
+                  "fetch": "web: use the typed Hono RPC client (hc<AppType>); server: do external I/O inside a *.io.ts service, where fetch is allowed.",
                   "process": "Functional core must not read the environment — accept config as plain input; the shell reads platform/config.ts.",
                   "Date": "Functional core must not read the clock — accept timestamps (epoch ms) as plain input from the shell.",
-                  "Promise": "Functional core must stay synchronous — do async work in *.repo.ts and pass plain data in.",
+                  "Promise": "Functional core must stay synchronous — do async work in *.io.ts and pass plain data in.",
                   "console": "Functional core must not perform I/O — return values and let the shell log.",
                   "setTimeout": "Functional core must not schedule work — keep it synchronous data-in/data-out.",
                   "setInterval": "Functional core must not schedule work — keep it synchronous data-in/data-out."
@@ -120,13 +135,13 @@
                 "paths": {
                   "effect": {
                     "importNames": ["Effect", "Layer", "Context", "ManagedRuntime", "Runtime"],
-                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.repo.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
+                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.io.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
                   }
                 },
                 "patterns": [
                   {
-                    "group": ["**/*.repo", "**/*.repo.ts", "./*.repo", "../**/*.repo"],
-                    "message": "Functional core must not import imperative-shell I/O services (*.repo). Keep core pure; wire repos in *.routes.ts / main.ts."
+                    "group": ["**/*.io", "**/*.io.ts", "./*.io", "../**/*.io"],
+                    "message": "Functional core must not import imperative-shell I/O services (*.io). Keep core pure; wire io in *.routes.ts / main.ts."
                   },
                   {
                     "group": ["../*/*.core", "../*/*.routes"],
@@ -154,7 +169,7 @@
                 },
                 "patterns": [
                   {
-                    "group": ["../*/*.core", "../*/*.repo", "../*/*.routes"],
+                    "group": ["../*/*.core", "../*/*.io", "../*/*.routes"],
                     "message": "A feature slice must not reach into a sibling slice's internals — depend on its published door (a service Tag + a shared Schema contract promoted to shared/). Modular monolith: modules talk through narrow doors, not back-channels."
                   }
                 ]

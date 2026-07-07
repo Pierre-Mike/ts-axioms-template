@@ -1,6 +1,6 @@
 ---
 name: add-slice
-description: Add a new feature slice to this repo the canonical way. Use when asked to add a feature, endpoint, resource, or API route. Runs the deterministic scaffolder, then guides filling in the pure core, repo I/O, and web wiring, and verifies with the repo gates.
+description: Add a new feature slice to this repo the canonical way. Use when asked to add a feature, endpoint, resource, or API route. Runs the deterministic scaffolder, then guides filling in the pure core, io layer, and web wiring, and verifies with the repo gates.
 ---
 
 # Add a feature slice
@@ -12,9 +12,9 @@ description: Add a new feature slice to this repo the canonical way. Use when as
    ```
 
    This generates `<feature>.core.ts` / `<feature>.core.test.ts` /
-   `<feature>.repo.ts` / `<feature>.routes.ts` / `<feature>.routes.test.ts`,
+   `<feature>.io.ts` / `<feature>.routes.ts` / `<feature>.routes.test.ts`,
    mounts the route in `api.ts` over the shared `appRuntime`, and registers
-   `<Feature>RepoLive` in `platform/runtime.ts`. Never hand-copy the health
+   `<Feature>IoLive` in `platform/runtime.ts`. Never hand-copy the health
    slice.
 
 2. Implement the real domain logic in `<feature>.core.ts` — PURE: plain data
@@ -23,7 +23,7 @@ description: Add a new feature slice to this repo the canonical way. Use when as
    (Biome enforces all of this). Grow the co-located test alongside; add
    fast-check properties for non-trivial logic.
 
-3. Replace the stub I/O in `<feature>.repo.ts` with the real service body.
+3. Replace the stub I/O in `<feature>.io.ts` with the real service body.
    Routes depend on the `Context.Tag`, never the implementation.
 
 4. Map any new error tags to HTTP statuses in `platform/http.ts`

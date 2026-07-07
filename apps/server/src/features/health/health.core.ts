@@ -5,7 +5,7 @@
  * results go out as plain data, and failures are values: this module models its
  * one fallible path (parsing an optional `?verbose=` query flag) as
  * `Either<HealthError, A>` rather than throwing. The imperative shell
- * (`health.repo.ts` / `health.routes.ts`) reads the clock + version, calls
+ * (`health.io.ts` / `health.routes.ts`) reads the clock + version, calls
  * these functions, and lifts any `Either` into Effect at the boundary.
  */
 import type { HealthStatus } from "@ts-axioms/shared"

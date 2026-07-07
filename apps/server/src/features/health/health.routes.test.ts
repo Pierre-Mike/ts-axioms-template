@@ -1,24 +1,24 @@
 /**
  * Route-level test for the `health` slice. Exercises the full impureim
- * sandwich over a FROZEN clock layer (the live `ClockRepoLive` is swapped for
- * a `Layer.succeed` stub — same Tag, fake I/O), and asserts both branches of
- * the contract: the 200 body decodes against the shared `HealthStatus`
+ * sandwich over a FROZEN clock layer (the live `HealthClockLive` is swapped
+ * for a `Layer.succeed` stub — same Tag, fake I/O), and asserts both branches
+ * of the contract: the 200 body decodes against the shared `HealthStatus`
  * schema, and a bad `?verbose=` flag yields the shared `ApiErrorBody`
  * envelope with a 400.
  */
 import { describe, expect, it } from "bun:test"
 import { decodeApiErrorBody, decodeHealthStatus } from "@ts-axioms/shared"
 import { Effect, Layer, ManagedRuntime } from "effect"
-import { ClockRepo, type ClockRepoApi } from "./health.repo"
+import { HealthClock, type HealthClockApi } from "./health.io"
 import { buildHealthApp } from "./health.routes"
 
-const frozenClock: ClockRepoApi = {
+const frozenClock: HealthClockApi = {
   now: () => Effect.succeed(5_000),
-  startedAt: () => Effect.succeed(2_000),
-  version: () => Effect.succeed("9.9.9"),
+  startedAt: 2_000,
+  version: "9.9.9",
 }
 
-const FrozenClock = Layer.succeed(ClockRepo, frozenClock)
+const FrozenClock = Layer.succeed(HealthClock, frozenClock)
 
 const app = buildHealthApp(ManagedRuntime.make(FrozenClock))
 

@@ -53,13 +53,13 @@ weekly mutation tests (Stryker on `*.core.ts`) and golden-task agent evals
 ## Reference slice: `health`
 
 `apps/server/src/features/health/` is the canonical slice and the CI smoke test:
-pure core (`health.core.ts`) → Effect repo (`health.repo.ts`) → Hono route
+pure core (`health.core.ts`) → Effect io (`health.io.ts`) → Hono route
 (`health.routes.ts`) → shared schema contract (`shared/src/health.ts`) → typed
 RPC with runtime decode → web route → Playwright e2e. Don't hand-copy it —
 generate new slices:
 
 ```bash
-bun run scaffold:slice <feature>   # core + test + repo + routes, mounted + wired
+bun run scaffold:slice <feature>   # core + test + io + routes, mounted + wired
 ```
 
 ## AI-ready by construction

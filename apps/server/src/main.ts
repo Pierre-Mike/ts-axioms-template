@@ -9,7 +9,6 @@ import { appRuntime } from "./platform/runtime"
 const server = Bun.serve({
   port: appConfig.port,
   fetch: app.fetch,
-  idleTimeout: 0,
 })
 
 console.log(`server up: http://localhost:${server.port}`)
