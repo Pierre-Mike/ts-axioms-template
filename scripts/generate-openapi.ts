@@ -9,10 +9,16 @@
  *
  * Adding a slice: register its path entry below using the slice's shared
  * schema; `bun run openapi:gen` rewrites openapi.json.
+ *
+ * Route <-> spec parity: importing the real Hono `app` and reading
+ * `app.routes` lets this script assert the hand-registered `doc.paths` below
+ * actually matches the live route surface — in both directions — instead of
+ * trusting that whoever adds a route remembers to document it here too.
  */
 import { join } from "node:path"
 import { JSONSchema } from "effect"
-import { ApiErrorBody, HealthStatus } from "../shared/src"
+import app from "../apps/server/src/api"
+import { ApiErrorBody, HealthStatus, Note, NoteList } from "../shared/src"
 
 // JSONSchema.make emits a draft-07 `$schema` key; OpenAPI 3.1 schemas don't
 // carry one per-component, so strip it.
@@ -56,7 +62,103 @@ const doc = {
         },
       },
     },
+    "/notes": {
+      get: {
+        summary: "List notes",
+        responses: {
+          "200": {
+            description: "All notes.",
+            content: { "application/json": { schema: schemaOf(NoteList) } },
+          },
+        },
+      },
+      post: {
+        summary: "Create a note",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: { text: { type: "string", maxLength: 500 } },
+                required: ["text"],
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "The created note.",
+            content: { "application/json": { schema: schemaOf(Note) } },
+          },
+          "400": errorResponse,
+          "409": errorResponse,
+        },
+      },
+    },
+    "/notes/{id}": {
+      get: {
+        summary: "Fetch a note by id",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "The note.",
+            content: { "application/json": { schema: schemaOf(Note) } },
+          },
+          "400": errorResponse,
+          "404": errorResponse,
+        },
+      },
+    },
   },
+}
+
+// Route <-> spec parity. `app.routes` includes middleware registrations (e.g.
+// the `ALL /*` cors `.use()`) alongside real handlers — only entries with a
+// concrete HTTP method are routes worth documenting. Sub-app mounts (e.g.
+// `.route("/health", buildHealthApp(...))`, whose inner handler is registered
+// at `/`) report through as the mounted path itself (`/health`, no trailing
+// slash) rather than `/health/`, but strip any trailing slash defensively so
+// this check doesn't depend on that Hono internal staying stable. Hono spells
+// a path param `/notes/:id`; OpenAPI spells the same param `/notes/{id}` —
+// convert the former into the latter so a param route compares equal.
+type RouteKey = string
+
+const normalizePath = (path: string): string => {
+  const withoutTrailingSlash = path === "/" ? path : path.replace(/\/+$/, "")
+  return withoutTrailingSlash.replace(/:([A-Za-z0-9_]+)/g, "{$1}")
+}
+
+const realRoutes = new Set<RouteKey>(
+  app.routes
+    .filter((route) => route.method !== "ALL")
+    .map((route) => `${route.method} ${normalizePath(route.path)}`),
+)
+
+const specRoutes = new Set<RouteKey>(
+  Object.entries(doc.paths).flatMap(([path, methods]) =>
+    Object.keys(methods).map((method) => `${method.toUpperCase()} ${normalizePath(path)}`),
+  ),
+)
+
+const undocumented = [...realRoutes].filter((route) => !specRoutes.has(route))
+const nonexistent = [...specRoutes].filter((route) => !realRoutes.has(route))
+
+if (undocumented.length > 0 || nonexistent.length > 0) {
+  for (const route of undocumented) {
+    console.error(`✖ route ${route} is not documented in generate-openapi.ts — register it`)
+  }
+  for (const route of nonexistent) {
+    console.error(`✖ spec documents ${route} but the app has no such route`)
+  }
+  process.exit(1)
 }
 
 const target = join(import.meta.dir, "..", "openapi.json")

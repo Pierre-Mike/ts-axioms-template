@@ -2,3 +2,4 @@
 // app consumes it; until then a slice may keep its types local.
 export * from "./api-error"
 export * from "./health"
+export * from "./note"

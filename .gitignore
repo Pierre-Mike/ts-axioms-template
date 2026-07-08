@@ -4,6 +4,7 @@ dist
 .vite
 *.log
 *.tsbuildinfo
+*.sqlite
 playwright-report
 test-results
 .DS_Store

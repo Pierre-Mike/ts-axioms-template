@@ -8,8 +8,12 @@ with an idempotent script.
 
 Targeting `refs/heads/main`, trunk-based:
 
-- **Pull request required** — `required_approving_review_count: 1`, stale
-  reviews dismissed on push.
+- **Pull request required** — `required_approving_review_count: 0` (a
+  solo-owner/no-bypass default: the ruleset has no bypass list, so even the
+  repo owner can't push `main` directly — requiring an approval nobody but
+  the owner could ever give would lock the repo out of merging its own PRs;
+  raise this once the repo has a second reviewer), stale reviews dismissed on
+  push.
 - **Required status checks** — `lint`, `typecheck`, `test`, `audit` must pass
   before merge. `strict_required_status_checks_policy: true` means the branch
   must also be up to date with `main`.

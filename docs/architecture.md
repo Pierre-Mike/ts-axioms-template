@@ -12,8 +12,9 @@ apps/server/src/
     health/
       health.core.ts        # PURE domain logic
       health.core.test.ts   # co-located unit test
-      health.repo.ts        # I/O as an Effect service (Context.Tag + Layer)
+      health.io.ts          # I/O as an Effect service (Context.Tag + Layer)
       health.routes.ts      # Hono shell (Effect.gen sandwich)
+    notes/                  # persistence exemplar: bun:sqlite io, multi-step sandwich
   platform/
     runtime.ts              # the shared Effect ManagedRuntime + Layer wiring
   api.ts                    # mounts every slice; exports AppType (hc RPC)
@@ -24,12 +25,18 @@ A slice is the unit of change: to add a capability you create one folder and
 touch two wiring points (`api.ts`, `platform/runtime.ts`). `platform/` holds
 only cross-cutting infrastructure shared by every slice.
 
+Two exemplar slices ship with the template: `health` is the minimal shape (a
+clock io service, one typed error), `notes` is the persistence shape — a
+genuine bun:sqlite repository behind the `NotesIo` Tag and a **multi-step**
+sandwich (impure count → pure capacity check → impure insert). Study whichever
+is closer to the slice you're adding.
+
 ### File-suffix roles
 
 | Suffix        | Role                          | Effect runtime? |
 | ------------- | ----------------------------- | --------------- |
 | `*.core.ts`   | Pure domain logic             | NO              |
-| `*.repo.ts`   | I/O service (`Context.Tag`)   | YES             |
+| `*.io.ts`     | I/O service (`Context.Tag`)   | YES             |
 | `*.routes.ts` | HTTP shell (Hono)             | YES             |
 | `main.ts`     | Composition root              | YES             |
 
@@ -38,14 +45,14 @@ only cross-cutting infrastructure shared by every slice.
 "Imperative shell, functional core." Every request handler is a sandwich:
 
 ```
-impure read (repo)  ->  pure transform (core)  ->  impure respond (routes)
+impure read (io)  ->  pure transform (core)  ->  impure respond (routes)
 ```
 
 - The **core** is pure and total. Fallible paths return values, not throws:
   `Either<E, A>`, `Option<A>`, or `Data` tagged unions. No `Effect` runtime, no
   `Layer`, no `Context`, no async, no I/O. `Either` / `Option` / `Data` /
   `Schema` are allowed (they are data, not runtime).
-- The **shell** (`*.repo.ts` / `*.routes.ts` / `main.ts`) owns the Effect
+- The **shell** (`*.io.ts` / `*.routes.ts` / `main.ts`) owns the Effect
   runtime: services are `Context.Tag`s, wiring is `Layer`s, the process runs one
   `ManagedRuntime`.
 - The boundary lifts core into Effect: inside `Effect.gen`, a core `Either` is
@@ -55,7 +62,7 @@ impure read (repo)  ->  pure transform (core)  ->  impure respond (routes)
 
 ```
        ┌──────────────────── routes.ts (Hono + Effect.gen) ───────────────────┐
-       │  yield* ClockRepo            (impure read — repo service)             │
+       │  yield* HealthClock          (impure read — io service)               │
        │  buildStatus({...})          (PURE core — the sandwich filling)       │
        │  yield* parseVerbose(q)      (PURE core Either, lifted at boundary)   │
        │  c.json(status)              (impure respond)                         │
@@ -63,12 +70,28 @@ impure read (repo)  ->  pure transform (core)  ->  impure respond (routes)
 ```
 
 Biome makes this structural, not aspirational: `*.core.ts` cannot import
-`Effect`/`Layer`/`Context` from `effect`, and cannot import any `*.repo` module.
+`Effect`/`Layer`/`Context` from `effect`, and cannot import any `*.io` module.
+
+## Errors & logging
+
+Typed failures cross HTTP as the shared `ApiErrorBody` envelope.
+`platform/http.ts` `STATUS_BY_TAG` is an **allowlist**: registering a tag
+declares it client-safe at its mapped status. An unregistered tag — or a
+defect caught by `app.onError` — returns a redacted `InternalServerError` 500
+and the real error is logged server-side, so forgetting to register fails
+safe instead of leaking. Programs log with `Effect.log*`, rendered by the
+Logger layer in `platform/runtime.ts` (`Logger.json` in production,
+`Logger.pretty` in dev); every request gets an id (`hono/request-id`) and an
+access log at the edge.
+
+Authentication/authorization is deliberately **out of template scope** — there
+is no template-sized version of it. Bring your own: middleware at the `api.ts`
+edge, identity passed into cores as plain data.
 
 ## `platform/` — cross-cutting infra
 
 `platform/runtime.ts` builds the single `ManagedRuntime` from the merged live
-Layers. Adding a slice means adding its `*RepoLive` to `AppLayer` here. Other
+Layers. Adding a slice means adding its `*IoLive` to `AppLayer` here. Other
 cross-cutting concerns (config readers, shell wrappers, websocket plumbing)
 belong in `platform/` too — never inside a feature.
 

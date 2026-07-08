@@ -47,7 +47,7 @@ bun run scaffold:slice <feature>
 ```
 
 Then follow the recipe in `CLAUDE.md` / `AGENTS.md`: implement the pure core
-(+ co-located test), replace the stub I/O in `.repo.ts`, map error tags in
+(+ co-located test), replace the stub I/O in `.io.ts`, map error tags in
 `platform/http.ts`. Add the web query + route if you have a UI.
 
 ## 6. End-to-end tests (optional)

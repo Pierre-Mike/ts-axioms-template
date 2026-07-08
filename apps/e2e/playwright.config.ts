@@ -23,9 +23,11 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      // Bun/Hono API.
+      // Bun/Hono API. NOTES_DB_PATH is ":memory:" so e2e runs don't
+      // accumulate notes in a local sqlite file across runs.
       command: "bun run dev:server",
       cwd: repoRoot,
+      env: { NOTES_DB_PATH: ":memory:" },
       url: "http://localhost:8787/health",
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
