@@ -14,15 +14,24 @@ const Env = S.Struct({
   APP_VERSION: S.optionalWith(S.String, { default: () => "0.0.0" }),
   /** Comma-separated extra CORS origins, e.g. "https://app.example.com". */
   CORS_ORIGINS: S.optionalWith(S.String, { default: () => "" }),
+  NODE_ENV: S.optionalWith(S.Literal("development", "test", "production"), {
+    default: () => "development" as const,
+  }),
+  NOTES_DB_PATH: S.optionalWith(S.String, { default: () => "notes.sqlite" }),
 })
 
 const env = S.decodeUnknownSync(Env)(process.env)
 
-const DEFAULT_ORIGINS = ["http://localhost:5173"]
+// The Vite dev server origin — only a sane default outside production; a
+// production deploy must opt in via CORS_ORIGINS instead of inheriting a
+// localhost origin it will never see traffic from.
+const DEFAULT_ORIGINS = env.NODE_ENV === "production" ? [] : ["http://localhost:5173"]
 
 export const appConfig = {
   port: env.PORT,
   version: env.APP_VERSION,
+  nodeEnv: env.NODE_ENV,
+  notesDbPath: env.NOTES_DB_PATH,
   corsOrigins: [
     ...DEFAULT_ORIGINS,
     ...env.CORS_ORIGINS.split(",")

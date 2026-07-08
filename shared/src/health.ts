@@ -11,9 +11,15 @@ export const HealthStatus = S.Struct({
   ok: S.Boolean,
   version: S.String,
   uptimeMs: S.Number,
+  /** Present (and `true`) only when the request set `?verbose=1`/`?verbose=true`. */
+  verbose: S.optional(S.Boolean),
 })
 
 export type HealthStatus = S.Schema.Type<typeof HealthStatus>
 
-/** Runtime decode for RPC consumers; throws a ParseError on contract drift. */
-export const decodeHealthStatus = S.decodeUnknownSync(HealthStatus)
+/**
+ * Runtime decode for RPC consumers; throws a ParseError on contract drift —
+ * including undocumented excess fields, so a server field added without a
+ * matching contract change fails loudly instead of passing silently.
+ */
+export const decodeHealthStatus = S.decodeUnknownSync(HealthStatus, { onExcessProperty: "error" })

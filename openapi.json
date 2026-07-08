@@ -47,6 +47,9 @@
                     },
                     "uptimeMs": {
                       "type": "number"
+                    },
+                    "verbose": {
+                      "type": "boolean"
                     }
                   },
                   "additionalProperties": false
@@ -81,7 +84,294 @@
                           "type": "string"
                         }
                       },
-                      "additionalProperties": false
+                      "additionalProperties": {
+                        "$id": "/schemas/unknown",
+                        "title": "unknown"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notes": {
+      "get": {
+        "summary": "List notes",
+        "responses": {
+          "200": {
+            "description": "All notes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "text",
+                      "createdAt"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "number"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a note",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created note.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "text",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "number"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed failure in the shared ApiErrorBody envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "error"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "_tag"
+                      ],
+                      "properties": {
+                        "_tag": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {
+                        "$id": "/schemas/unknown",
+                        "title": "unknown"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed failure in the shared ApiErrorBody envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "error"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "_tag"
+                      ],
+                      "properties": {
+                        "_tag": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {
+                        "$id": "/schemas/unknown",
+                        "title": "unknown"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notes/{id}": {
+      "get": {
+        "summary": "Fetch a note by id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The note.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "text",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "number"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed failure in the shared ApiErrorBody envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "error"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "_tag"
+                      ],
+                      "properties": {
+                        "_tag": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {
+                        "$id": "/schemas/unknown",
+                        "title": "unknown"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed failure in the shared ApiErrorBody envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "error"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "_tag"
+                      ],
+                      "properties": {
+                        "_tag": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {
+                        "$id": "/schemas/unknown",
+                        "title": "unknown"
+                      }
                     }
                   },
                   "additionalProperties": false

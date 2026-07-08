@@ -6,9 +6,10 @@
  */
 import { createRouter } from "@tanstack/react-router"
 import { healthRoute } from "./features/health/health.route"
+import { notesRoute } from "./features/notes/notes.route"
 import { type RouterContext, rootRoute } from "./root-route"
 
-const routeTree = rootRoute.addChildren([healthRoute])
+const routeTree = rootRoute.addChildren([healthRoute, notesRoute])
 
 export const createAppRouter = (context: RouterContext) =>
   createRouter({

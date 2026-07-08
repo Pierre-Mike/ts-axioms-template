@@ -12,25 +12,24 @@ import { Effect, type ManagedRuntime } from "effect"
 import { Hono } from "hono"
 import { errorEnvelope } from "../../platform/http"
 import { buildStatus, parseVerbose } from "./health.core"
-import { ClockRepo } from "./health.repo"
+import { HealthClock } from "./health.io"
 
 // Runtime surface the handlers depend on. Prod passes `appRuntime`; route tests
-// substitute a stub runtime built over a fake ClockRepo layer.
-export type HealthRouteRuntime = Pick<ManagedRuntime.ManagedRuntime<ClockRepo, never>, "runPromise">
+// substitute a stub runtime built over a fake HealthClock layer.
+export type HealthRouteRuntime = Pick<
+  ManagedRuntime.ManagedRuntime<HealthClock, never>,
+  "runPromise"
+>
 
 export const buildHealthApp = (runtime: HealthRouteRuntime) =>
   new Hono().get("/", async (c) => {
     const program = Effect.gen(function* () {
       // --- impure read (shell) ---
-      const clock = yield* ClockRepo
-      const [now, startedAt, version] = yield* Effect.all([
-        clock.now(),
-        clock.startedAt(),
-        clock.version(),
-      ])
+      const clock = yield* HealthClock
+      const now = yield* clock.now()
       // --- pure core: lift the Either typed-error into Effect at the boundary ---
       const verbose = yield* parseVerbose(c.req.query("verbose"))
-      const status = buildStatus({ version, startedAt, now })
+      const status = buildStatus({ version: clock.version, startedAt: clock.startedAt, now })
       return { status, verbose }
     })
 
