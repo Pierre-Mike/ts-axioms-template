@@ -22,6 +22,6 @@ or {
   `const $name = ($params) => $body`,
   `const $name = ($params): $ret => $body`
 } where {
-  $params <: [$p1, $p2, ...$rest],
+  $params <: [$p1, $p2, ...],
   register_diagnostic(span=$name, message="ts-axioms: named/exported declarations take at most one parameter — pass a single options object instead (useMaxParams applies to signatures you design, not callback shapes dictated by a callee like Array#sort/#reduce or Hono middleware).")
 }
