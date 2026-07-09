@@ -66,6 +66,17 @@ describe("POST /notes", () => {
     expect(body.error._tag).toBe("InvalidNoteText")
   })
 
+  it("maps a JSON `null` body to the shared 400 error envelope, not a 500", async () => {
+    const res = await freshApp().request("/", {
+      method: "POST",
+      body: "null",
+      headers: { "Content-Type": "application/json" },
+    })
+    expect(res.status).toBe(400)
+    const body = decodeApiErrorBody(await res.json())
+    expect(body.error._tag).toBe("InvalidNoteText")
+  })
+
   it("maps at-capacity to the shared 409 error envelope", async () => {
     const res = await postJson({ app: freshApp(makeFullSeed()), text: "one too many" })
     expect(res.status).toBe(409)

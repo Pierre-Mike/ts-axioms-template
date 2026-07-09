@@ -57,6 +57,22 @@ describe("harness doctor", () => {
     expect(findings.some((finding) => finding.problem.includes("`process`"))).toBe(true)
   })
 
+  it("flags a dropped effect deep-subpath import ban (the effect/Effect bypass)", () => {
+    const biome = tamperedBiome((clone) => {
+      const core = (clone.overrides as Array<Record<string, unknown>>).find((override) =>
+        ((override.includes as string[]) ?? []).includes("**/*.core.ts"),
+      )
+      const linter = core?.linter as {
+        rules: {
+          style: { noRestrictedImports: { options: { paths: Record<string, unknown> } } }
+        }
+      }
+      delete linter.rules.style.noRestrictedImports.options.paths["effect/Effect"]
+    })
+    const findings = checkBiome(biome)
+    expect(findings.some((finding) => finding.problem.includes("effect/Effect"))).toBe(true)
+  })
+
   it("flags an unregistered grit plugin", () => {
     const biome = tamperedBiome((clone) => {
       clone.plugins = []
@@ -128,6 +144,13 @@ describe("harness doctor", () => {
       docsSyncTestExists: real.docsSyncTestExists,
     })
     expect(findings.some((finding) => finding.problem.includes("CLAUDE.md"))).toBe(true)
+  })
+
+  it("flags openapi:check dropped from the verify chain (verify must equal CI)", () => {
+    const pkg = structuredClone(real.pkg) as { scripts: Record<string, string> }
+    pkg.scripts.verify = pkg.scripts.verify.replace("bun run openapi:check && ", "")
+    const findings = checkScriptWiring(pkg)
+    expect(findings.some((finding) => finding.problem.includes("openapi:check"))).toBe(true)
   })
 
   it("flags the doctor unwired from the test script", () => {

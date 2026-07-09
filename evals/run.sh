@@ -25,7 +25,9 @@ while IFS= read -r task; do
   if (
     cd "$wt"
     bun install --frozen-lockfile >/dev/null
-    bunx @anthropic-ai/claude-code -p "$prompt" --permission-mode acceptEdits --max-turns 50 || true
+    # Major-pinned: an unpinned bunx pulls whatever shipped that morning,
+    # making week-over-week eval scores incomparable.
+    bunx @anthropic-ai/claude-code@2 -p "$prompt" --permission-mode acceptEdits --max-turns 50 || true
     bun run verify
   ); then
     echo "PASS $id"

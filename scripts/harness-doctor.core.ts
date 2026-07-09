@@ -100,6 +100,20 @@ const CORE_DENIED_GLOBALS: ReadonlyArray<string> = [
 
 const EFFECT_RUNTIME_NAMES: ReadonlyArray<string> = ["Effect", "Layer", "Context"]
 
+/**
+ * Deep-subpath escape hatches: `import * as Effect from "effect/Effect"`
+ * bypasses an importNames ban on the bare "effect" package, so each runtime
+ * module must ALSO be banned as its own path key.
+ */
+const EFFECT_RUNTIME_SUBPATHS: ReadonlyArray<string> = [
+  "effect/Effect",
+  "effect/Layer",
+  "effect/Context",
+  "effect/ManagedRuntime",
+  "effect/Runtime",
+  "effect/Scope",
+]
+
 const BIOME_AXIOM = "fail-closed lint scoping"
 
 const checkBiomeCoreOverride = (biome: unknown): Finding[] => {
@@ -147,7 +161,20 @@ const checkBiomeCoreOverride = (biome: unknown): Finding[] => {
         "restore the effect-runtime import ban (Effect/Layer/Context/ManagedRuntime/Runtime) in the *.core.ts override",
     }),
   )
-  return [...missingGlobals, ...missingImportBans]
+  const bannedPaths = dig({
+    value: core,
+    path: ["linter", "rules", "style", "noRestrictedImports", "options", "paths"],
+  })
+  const bannedPathKeys = isRecord(bannedPaths) ? Object.keys(bannedPaths) : []
+  const missingSubpathBans = EFFECT_RUNTIME_SUBPATHS.filter(
+    (subpath) => !bannedPathKeys.includes(subpath),
+  ).map((subpath) => ({
+    axiom: "impureim sandwich",
+    problem: `the **/*.core.ts override no longer bans the deep import \`${subpath}\` — \`import * as X from "${subpath}"\` bypasses the bare-package importNames ban`,
+    remedy:
+      "restore the effect/* subpath bans (effect/Effect, effect/Layer, effect/Context, effect/ManagedRuntime, effect/Runtime, effect/Scope) in the *.core.ts override",
+  }))
+  return [...missingGlobals, ...missingImportBans, ...missingSubpathBans]
 }
 
 const checkBiomePlugins = (biome: unknown): Finding[] => {
@@ -414,7 +441,7 @@ export const checkCanonSync = (input: {
   ]
 }
 
-const VERIFY_GATES = ["lint:ci", "typecheck", "test", "audit"]
+const VERIFY_GATES = ["lint:ci", "openapi:check", "typecheck", "test", "audit"]
 const TEST_META_GATES = ["check-colocated-tests", "check-harness"]
 
 export const checkScriptWiring = (pkg: unknown): Finding[] => {
@@ -427,7 +454,7 @@ export const checkScriptWiring = (pkg: unknown): Finding[] => {
       axiom: "gate wiring",
       problem: `package.json \`verify\` no longer chains \`${gate}\``,
       remedy:
-        "keep verify = lint:ci + typecheck + test + audit — the one-shot local equivalent of the required CI checks",
+        "keep verify = lint:ci + openapi:check + typecheck + test + audit — the one-shot local equivalent of the CI gates",
     }),
   )
   const testFindings = TEST_META_GATES.filter((needle) => !scriptOf("test").includes(needle)).map(

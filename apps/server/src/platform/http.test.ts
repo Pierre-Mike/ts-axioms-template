@@ -6,6 +6,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test"
 import { decodeApiErrorBody } from "@ts-axioms/shared"
 import { Hono } from "hono"
+import { HTTPException } from "hono/http-exception"
+import { validator } from "hono/validator"
 import { errorEnvelope, onUnexpectedError, type TaggedError } from "./http"
 
 let consoleErrorSpy: ReturnType<typeof spyOn>
@@ -55,5 +57,41 @@ describe("onUnexpectedError", () => {
     const body = decodeApiErrorBody(await res.json())
     expect(body).toEqual({ ok: false, error: { _tag: "InternalServerError" } })
     expect(consoleErrorSpy).toHaveBeenCalled()
+  })
+
+  it("respects an HTTPException's status instead of redacting it to 500 (malformed JSON → 400)", async () => {
+    // Same wiring as api.ts: onError + a validator("json") route. Hono's
+    // validator throws HTTPException(400) on an unparsable body.
+    const app = new Hono().onError(onUnexpectedError).post(
+      "/notes",
+      validator("json", (value) => value),
+      (c) => c.json({ ok: true as const }),
+    )
+
+    const res = await app.request("/notes", {
+      method: "POST",
+      body: "{bad",
+      headers: { "Content-Type": "application/json" },
+    })
+    expect(res.status).toBe(400)
+    const body = decodeApiErrorBody(await res.json())
+    expect(body.error._tag).toBe("HttpError")
+    expect(body.error.status).toBe(400)
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
+  })
+
+  it("returns a custom HTTPException response verbatim (middleware-set headers survive)", async () => {
+    const app = new Hono().onError(onUnexpectedError).get("/auth", () => {
+      throw new HTTPException(401, {
+        res: new Response("Unauthorized", {
+          status: 401,
+          headers: { "WWW-Authenticate": 'Basic realm="notes"' },
+        }),
+      })
+    })
+
+    const res = await app.request("/auth")
+    expect(res.status).toBe(401)
+    expect(res.headers.get("WWW-Authenticate")).toBe('Basic realm="notes"')
   })
 })

@@ -144,13 +144,15 @@ decide → impure write). Study whichever is closer to your slice, then:
 
 1. `bun run scaffold:slice <feature>` — generates the slice files in the
    canonical shape, mounts the route in `api.ts` over the shared `appRuntime`,
-   and registers the live Layer in `platform/runtime.ts`. Never hand-copy a
-   slice.
+   registers the live Layer in `platform/runtime.ts`, registers a stub OpenAPI
+   path in `scripts/generate-openapi.ts`, and regenerates `openapi.json`.
+   Never hand-copy a slice.
 2. Implement the real pure logic in `<feature>.core.ts` + its co-located test.
 3. Replace the stub I/O in `<feature>.io.ts`.
 4. Map new error tags in `platform/http.ts`.
-5. Promote contracts to `shared/src` when the web consumes them; register the
-   path in `scripts/generate-openapi.ts` and run `bun run openapi:gen`.
+5. Promote contracts to `shared/src` when the web consumes them; grow the
+   scaffolded stub entry in `scripts/generate-openapi.ts` and re-run
+   `bun run openapi:gen`.
 6. (web) add `<feature>.queries.ts` (queryOptions once, decode with the shared
    schema) + `<feature>.route.tsx`.
 7. `bun run verify`.
@@ -159,14 +161,14 @@ decide → impure write). Study whichever is closer to your slice, then:
 
 ```bash
 bun install            # installs + wires git hooks (lefthook)
-bun run verify         # lint:ci + typecheck + test + audit — the CI gates, one shot
+bun run verify         # lint:ci + openapi:check + typecheck + test + audit — the CI gates
 bun run lint           # biome check --write .   (autofix)
 bun run lint:ci        # biome ci .              (no writes; CI gate)
 bun run typecheck      # tsc -b
 bun run test           # core/test colocation check + bun test apps/server shared scripts infra
 bun run test:e2e       # playwright (apps/e2e; run `bunx playwright install` once)
 bun run test:mutation  # stryker mutation run over *.core.ts (also weekly in CI)
-bun run audit          # fallow full-repo scan (dead code / dup / cycles / complexity)
+bun run audit          # fallow: dead-code + dupes full-repo; audit gates diff vs local main
 bun run doctor         # harness self-check: the enforcement stack itself is intact (also in test)
 bun run openapi:gen    # regenerate openapi.json from the shared schemas
 bun run scaffold:slice # generate a new feature slice

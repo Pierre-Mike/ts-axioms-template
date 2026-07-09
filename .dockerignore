@@ -1,0 +1,33 @@
+# Build context = repo root (see apps/server/Dockerfile). Keep the context to
+# what the Dockerfile actually COPYs: the workspace package.json files,
+# bun.lock, tsconfig.base.json, shared/, and apps/server/src.
+.git
+.github
+.claude
+.devcontainer
+
+# Dependencies are installed inside the image; never ship the host's.
+node_modules
+**/node_modules
+
+# Build / tool outputs.
+**/dist
+**/.vite
+**/.tanstack
+**/.stryker-tmp
+*.log
+*.tsbuildinfo
+
+# Local data — the image must start from an empty database.
+*.sqlite
+
+# Test / eval artifacts.
+apps/e2e/test-results
+apps/e2e/playwright-report
+.evals-wt-*
+
+# Not part of the runtime image.
+docs
+specs
+evals
+infra/node_modules

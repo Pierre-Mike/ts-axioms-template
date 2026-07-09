@@ -9,6 +9,8 @@
       "!**/.vite",
       "!**/.tanstack",
       "!**/.stryker-tmp",
+      "!**/.claude/skills",
+      "!**/.claude/traces",
       "!**/.claude/worktrees",
       "!**/apps/web/src/routeTree.gen.ts",
       "!openapi.json"
@@ -152,6 +154,24 @@
                 "paths": {
                   "effect": {
                     "importNames": ["Effect", "Layer", "Context", "ManagedRuntime", "Runtime"],
+                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.io.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
+                  },
+                  "effect/Effect": {
+                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.io.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
+                  },
+                  "effect/Layer": {
+                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.io.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
+                  },
+                  "effect/Context": {
+                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.io.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
+                  },
+                  "effect/ManagedRuntime": {
+                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.io.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
+                  },
+                  "effect/Runtime": {
+                    "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.io.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
+                  },
+                  "effect/Scope": {
                     "message": "Functional core must stay pure: model failures as Either/Option/Data tagged unions. The Effect runtime (Effect/Layer/Context) lives only in *.io.ts / *.routes.ts / main.ts. Either, Option, Data and Schema are allowed here."
                   }
                 },
