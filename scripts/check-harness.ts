@@ -11,7 +11,7 @@
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { type DoctorInput, runDoctor } from "./harness-doctor.core"
+import { type DoctorInput, dig, isRecord, runDoctor, strings } from "./harness-doctor.core"
 
 const textOrNull = (path: string): string | null =>
   existsSync(path) ? readFileSync(path, "utf8") : null
@@ -36,47 +36,32 @@ const yamlOrNull = (path: string): unknown => {
   }
 }
 
-const workspacePatternsOf = (pkg: unknown): string[] => {
-  const workspaces =
-    typeof pkg === "object" && pkg !== null && "workspaces" in pkg
-      ? (pkg as { workspaces?: unknown }).workspaces
-      : undefined
-  return Array.isArray(workspaces)
-    ? workspaces.filter((entry): entry is string => typeof entry === "string")
-    : []
+const isWorkspaceDir = (dir: string): boolean => existsSync(join(dir, "package.json"))
+
+const expandPattern = (input: { readonly root: string; readonly pattern: string }): string[] => {
+  if (!input.pattern.endsWith("/*")) {
+    return isWorkspaceDir(join(input.root, input.pattern)) ? [input.pattern] : []
+  }
+  const parent = input.pattern.slice(0, -2)
+  const parentAbs = join(input.root, parent)
+  if (!existsSync(parentAbs)) return []
+  return readdirSync(parentAbs)
+    .filter((entry) => isWorkspaceDir(join(parentAbs, entry)))
+    .map((entry) => `${parent}/${entry}`)
 }
 
 const expandWorkspaces = (input: {
   readonly root: string
-  readonly patterns: string[]
-}): string[] => {
-  const dirs: string[] = []
-  for (const pattern of input.patterns) {
-    if (pattern.endsWith("/*")) {
-      const parent = pattern.slice(0, -2)
-      const parentAbs = join(input.root, parent)
-      if (!existsSync(parentAbs)) continue
-      for (const entry of readdirSync(parentAbs)) {
-        if (existsSync(join(parentAbs, entry, "package.json"))) dirs.push(`${parent}/${entry}`)
-      }
-    } else if (existsSync(join(input.root, pattern, "package.json"))) {
-      dirs.push(pattern)
-    }
-  }
-  return dirs.sort()
-}
+  readonly patterns: ReadonlyArray<string>
+}): string[] =>
+  input.patterns.flatMap((pattern) => expandPattern({ root: input.root, pattern })).sort()
 
 const tsconfigReferencesOf = (tsconfig: unknown): string[] => {
-  const references =
-    typeof tsconfig === "object" && tsconfig !== null && "references" in tsconfig
-      ? (tsconfig as { references?: unknown }).references
-      : undefined
+  const references = dig({ value: tsconfig, path: ["references"] })
   if (!Array.isArray(references)) return []
-  return references.flatMap((ref) =>
-    typeof ref === "object" && ref !== null && "path" in ref && typeof ref.path === "string"
-      ? [ref.path]
-      : [],
-  )
+  return references
+    .filter(isRecord)
+    .flatMap((ref) => (typeof ref.path === "string" ? [ref.path] : []))
 }
 
 export const readDoctorInput = (root: string): DoctorInput => {
@@ -97,7 +82,10 @@ export const readDoctorInput = (root: string): DoctorInput => {
     pkg,
     workflows,
     bunVersionFileExists: existsSync(join(root, ".bun-version")),
-    workspaceDirs: expandWorkspaces({ root, patterns: workspacePatternsOf(pkg) }),
+    workspaceDirs: expandWorkspaces({
+      root,
+      patterns: strings(dig({ value: pkg, path: ["workspaces"] })),
+    }),
     tsconfigReferences: tsconfigReferencesOf(jsonOrNull(join(root, "tsconfig.json"))),
     claudeMd: textOrNull(join(root, "CLAUDE.md")),
     agentsMd: textOrNull(join(root, "AGENTS.md")),

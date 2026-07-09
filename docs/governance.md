@@ -53,6 +53,40 @@ it exists, otherwise POSTs a create.
 3. Re-apply: `./.github/scripts/apply-ruleset.sh`.
 4. Commit the JSON change through a PR like any other code.
 
+## Merge hygiene: head branches die on merge
+
+`apply-ruleset.sh` also PATCHes the repo setting `delete_branch_on_merge=true`.
+This is not cosmetic. With squash-merge (forced by `required_linear_history`),
+the merged head branch ends up **ahead** of `main` by its original commits —
+GitHub compares by commit, not by diff. Any automated ship loop that asks "does
+my branch have commits main doesn't?" answers yes and opens a fresh PR of
+already-merged work. A descendant repo audited in 2026-07 accumulated 22 of 59
+merged PRs (~37%) as exactly these empty re-merges. Deleting the branch at
+merge time removes the trigger structurally.
+
+Agent ship loops should also check `gh pr list --head <branch>` before opening
+a PR, so a still-open PR for the branch is reused instead of duplicated.
+
+## Decay resistance: what a fork inherits by construction
+
+The template assumes its descendants will rename apps, add surfaces, and prune
+files — and that nobody re-audits enforcement after doing so. Two properties
+keep the axioms alive through that churn:
+
+- **Rules attach to file shape, not location.** Biome scoping is keyed to
+  suffixes and folder shapes (`**/*.core.ts`, `**/*.io.ts`, `**/features/**`,
+  `**/platform/config.ts`) with denials global and allows sanctioned. Renaming
+  `apps/server` to anything, or adding a sixth app, changes nothing about what
+  is enforced — a rename cannot fail open.
+- **The harness checks itself.** `bun run doctor`
+  (`scripts/check-harness.ts`, running inside the required `test` check)
+  structurally asserts the enforcement stack: Biome overrides + grit plugins
+  present, lefthook jobs wired, CI job names cover the ruleset's required
+  checks, actions SHA-pinned, every workspace in the `tsc -b` graph, canon
+  markers intact, gate scripts composed. The doctor will not stop a determined
+  owner from deleting gates — it converts *silent, incremental* decay into a
+  *loud, deliberate* diff that fails the most-watched pipeline in the repo.
+
 ## Org-level bypass
 
 On an organization repo, members with **admin** (or an org owner) can bypass a

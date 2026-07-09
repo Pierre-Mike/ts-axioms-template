@@ -124,6 +124,18 @@ any `*.io` module are banned, the globals `Date` / `process` / `Promise` /
   compound, guidelines decay). Loop: `/retro` proposes → apply → re-run
   `evals/tasks.jsonl` → keep what raises the score.
 
+- **The harness checks itself.** Enforcement attaches to file *shape*, not
+  location (`**/*.core.ts`, `**/*.io.ts`, `**/features/**`,
+  `**/platform/config.ts`): denials are global, allows are sanctioned shapes,
+  so renaming or adding an app cannot fail open. `bun run doctor`
+  (`scripts/check-harness.ts`, inside the `test` gate) structurally asserts
+  the enforcement stack itself: Biome overrides + grit plugins present,
+  lefthook jobs wired, CI job names cover the ruleset's required checks,
+  actions SHA-pinned, every workspace in the `tsc -b` graph, canon sync
+  markers intact, gate scripts composed. Deleting a gate is a deliberate,
+  visible act that fails CI — not silent drift. Motivated by a descendant
+  audit where an app rename silently evaporated every path-scoped rule.
+
 ## How to add a feature slice
 
 `features/health` is the minimal exemplar (clock io); `features/notes` is the
@@ -155,6 +167,7 @@ bun run test           # core/test colocation check + bun test apps/server share
 bun run test:e2e       # playwright (apps/e2e; run `bunx playwright install` once)
 bun run test:mutation  # stryker mutation run over *.core.ts (also weekly in CI)
 bun run audit          # fallow full-repo scan (dead code / dup / cycles / complexity)
+bun run doctor         # harness self-check: the enforcement stack itself is intact (also in test)
 bun run openapi:gen    # regenerate openapi.json from the shared schemas
 bun run scaffold:slice # generate a new feature slice
 bun run scaffold:clean # remove apps/web + apps/e2e -> backend-only repo
