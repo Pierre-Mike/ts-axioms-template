@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Harness Decay-Proofing</title>
+<style>
+  :root {
+    /* Synced visual identity — "sentinel / immune system" theme: graphite + amber watchlight,
+       green = enforced/passing, red = fail-open/decayed. Kin to the uptime spec's palette. */
+    --bg:        #0f1115;
+    --surface:   #171a21;
+    --surface-2: #1f242e;
+    --border:    #2a313d;
+    --text:      #e6e9ef;
+    --fg:        #e6e9ef;
+    --muted:     #9aa4b2;
+    --accent:    #f2b544;   /* amber = the sentinel watching the gates */
+    --ok:        #3ddc84;   /* signal green = enforced / passing */
+    --danger:    #e5534b;   /* red = fail-open / decayed */
+    --font:      ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:      ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.55; }
+  main { max-width: 920px; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  h1 { font-size: 1.9rem; margin: 0 0 .5rem; letter-spacing: -.02em; }
+  h2 { font-size: 1.35rem; margin-top: 2.8rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.08rem; margin-top: 1.8rem; }
+  h4 { font-size: .95rem; margin: 1.2rem 0 .4rem; color: var(--accent); }
+  p  { margin: .6rem 0; }
+  code { font-family: var(--mono); font-size: .86em; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: .08em .35em; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .9rem 1rem; overflow-x: auto; }
+  pre code { background: none; border: none; padding: 0; }
+  figure { margin: 1.6rem 0; text-align: center; }
+  figcaption { color: var(--muted); font-size: .82rem; margin-top: .5rem; }
+  details.meta { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .6rem .9rem; margin: 1rem 0; }
+  details.meta summary { cursor: pointer; color: var(--muted); }
+  details.meta dl { display: grid; grid-template-columns: 9rem 1fr; gap: .25rem .8rem; margin: .6rem 0 0; font-size: .85rem; }
+  details.meta dt { color: var(--muted); }
+  details.meta dd { margin: 0; font-family: var(--mono); }
+  .tag { font-size: .7rem; font-family: var(--mono); border-radius: 4px; padding: .1em .45em; vertical-align: middle; margin-right: .3em; }
+  .tag.existing { background: #223047; color: #8ec2ff; }
+  .tag.new { background: #1d3527; color: var(--ok); }
+  ul.checklist { list-style: none; padding-left: .2rem; }
+  ul.checklist li { margin: .35rem 0; }
+  code.status { color: var(--accent); min-width: 3.2em; display: inline-block; text-align: center; }
+  .phase { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.3rem 1.2rem; margin: 1.4rem 0; }
+  .loop { background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 6px; padding: .6rem .9rem; margin-top: 1rem; font-size: .9rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; margin: 1rem 0; }
+  th, td { border: 1px solid var(--border); padding: .45rem .6rem; text-align: left; vertical-align: top; }
+  th { background: var(--surface-2); }
+  section#notes details { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .9rem; margin: .5rem 0; }
+  section#notes summary { cursor: pointer; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- ===== HEADER + UPDATABLE METADATA ===== -->
+  <header>
+    <h1>Plan: Harness Decay-Proofing</h1>
+    <details class="meta">
+      <summary>Metadata</summary>
+      <dl>
+        <dt>created</dt>      <dd>2026-07-09</dd>
+        <dt>modified</dt>     <dd>2026-07-09</dd>
+        <dt>commits</dt>      <dd>—</dd>
+        <dt>agent name</dt>   <dd>team-lead (Claude Fable 5)</dd>
+        <dt>session id</dt>   <dd>aef7744c</dd>
+        <dt>back refs</dt>    <dd>specs/uptime-agentic-engineering-harness.html, PR #12 (critique hardening), pi-browser-dashboard adherence review 2026-07-09</dd>
+        <dt>forward refs</dt> <dd>—</dd>
+      </dl>
+    </details>
+  </header>
+
+  <figure>
+    <svg viewBox="0 0 680 240" width="100%" height="auto" role="img"
+         aria-labelledby="heroTitle" preserveAspectRatio="xMidYMid meet">
+      <title id="heroTitle">Descendant repos decay unless the harness defends itself</title>
+      <desc>A template box feeds a descendant repo. Drift arrows (rename, delete, new app) attack the gates; a sentinel shield labeled doctor plus shape-scoped rules block them.</desc>
+      <defs>
+        <marker id="arrow-hero" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+        </marker>
+        <marker id="arrow-hero-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--danger)"/>
+        </marker>
+      </defs>
+      <rect x="30" y="90" width="140" height="60" rx="10" fill="var(--surface)" stroke="var(--ok)" stroke-width="2"/>
+      <text x="100" y="125" text-anchor="middle" fill="var(--text)" font-family="var(--font)" font-size="16">template</text>
+      <line x1="170" y1="120" x2="270" y2="120" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-hero)"/>
+      <text x="220" y="108" text-anchor="middle" fill="var(--muted)" font-family="var(--font)" font-size="12">fork</text>
+      <rect x="270" y="90" width="160" height="60" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="2"/>
+      <text x="350" y="125" text-anchor="middle" fill="var(--text)" font-family="var(--font)" font-size="16">descendant</text>
+      <line x1="350" y1="30" x2="350" y2="82" stroke="var(--danger)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow-hero-bad)"/>
+      <text x="350" y="20" text-anchor="middle" fill="var(--danger)" font-family="var(--font)" font-size="13">rename · delete · new app</text>
+      <path d="M 470 120 q 20 -35 60 -35 q 40 0 60 35 q -20 35 -60 35 q -40 0 -60 -35 z"
+            fill="var(--surface-2)" stroke="var(--accent)" stroke-width="2.5"/>
+      <circle cx="530" cy="120" r="12" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+      <circle cx="530" cy="120" r="4" fill="var(--accent)"/>
+      <text x="530" y="180" text-anchor="middle" fill="var(--accent)" font-family="var(--font)" font-size="14">doctor + shape rules</text>
+      <line x1="430" y1="120" x2="462" y2="120" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-hero)"/>
+      <line x1="598" y1="120" x2="650" y2="120" stroke="var(--ok)" stroke-width="2" marker-end="url(#arrow-hero)"/>
+      <text x="640" y="108" text-anchor="end" fill="var(--ok)" font-family="var(--font)" font-size="12">still enforced</text>
+    </svg>
+    <figcaption>The harness must survive its descendants: drift is blocked by shape-scoped rules and a self-checking doctor.</figcaption>
+  </figure>
+
+  <!-- ===== PURPOSE / PROBLEM / SOLUTION ===== -->
+  <section id="purpose">
+    <h2>Purpose</h2>
+    <p>Make ts-axioms-template's enforcement stack <strong>fail closed under drift and loud under deletion</strong>, so repos created from it keep their axioms enforced as they grow, rename apps, and add surfaces. Every countermeasure here is motivated by a measured decay observed in a real descendant (<code>pi-browser-dashboard</code>, reviewed 2026-07-09): the axioms that survived there were exactly the tool-enforced ones; every prose-only rule decayed. This plan turns that finding back on the template itself.</p>
+  </section>
+
+  <section id="problem">
+    <h2>Problem</h2>
+    <p>The audit of the descendant found five decay mechanisms, none of which the template currently resists:</p>
+    <table>
+      <tr><th>Decay observed in descendant</th><th>Template weakness that allowed it</th></tr>
+      <tr><td>App renamed <code>server → daemon</code>; every purity/funnel rule silently matched zero files, then got deleted</td><td>Rules scoped by <em>path</em> (<code>apps/server/src/**</code>) fail <strong>open</strong> on rename</td></tr>
+      <tr><td>Typecheck removed entirely — no CI job, no hook; type errors can merge</td><td>Nothing asserts the enforcement stack itself exists</td></tr>
+      <tr><td>Web tier never had module-boundary or purity rules; cross-feature imports everywhere, 1135-line god components</td><td>Door bans shipped only for server paths; new surfaces inherit nothing</td></tr>
+      <tr><td>Typed RPC neutralized: <code>api as any</code>, <code>res.json() as T</code>, hand-mirrored types — drift fails silently</td><td>“Decode at the boundary” has no lint; casting <code>.json()</code> is legal</td></tr>
+      <tr><td>22 of 59 merged PRs (~37%) were empty re-merges; ruleset uncommitted, actions unpinned — one rename already blocked merges for a day</td><td>Squash-merge leaves the head branch “ahead”; governance-as-code files are deletable without trace</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 680 220" width="100%" height="auto" role="img"
+           aria-labelledby="probTitle" preserveAspectRatio="xMidYMid meet">
+        <title id="probTitle">Path-scoped rules fail open when an app is renamed</title>
+        <desc>A dashed enforcement boundary drawn around apps/server no longer contains the renamed apps/daemon box, which sits outside unguarded.</desc>
+        <rect x="40" y="50" width="280" height="130" rx="10" fill="none" stroke="var(--ok)" stroke-width="2" stroke-dasharray="7 5"/>
+        <text x="180" y="40" text-anchor="middle" fill="var(--ok)" font-family="var(--mono)" font-size="13">rules: apps/server/**</text>
+        <rect x="80" y="90" width="200" height="52" rx="8" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
+        <text x="180" y="122" text-anchor="middle" fill="var(--muted)" font-family="var(--mono)" font-size="14" text-decoration="line-through">apps/server</text>
+        <line x1="330" y1="116" x2="410" y2="116" stroke="var(--danger)" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="370" y="104" text-anchor="middle" fill="var(--danger)" font-family="var(--font)" font-size="12">rename</text>
+        <rect x="420" y="90" width="200" height="52" rx="8" fill="var(--surface)" stroke="var(--danger)" stroke-width="2"/>
+        <text x="520" y="122" text-anchor="middle" fill="var(--text)" font-family="var(--mono)" font-size="14">apps/daemon</text>
+        <text x="520" y="170" text-anchor="middle" fill="var(--danger)" font-family="var(--font)" font-size="13">zero rules attach</text>
+      </svg>
+      <figcaption>Fail-open: the boundary stays where the path was; the code walks out of it.</figcaption>
+    </figure>
+  </section>
+
+  <section id="solution">
+    <h2>Solution</h2>
+    <p>Two complementary layers, plus three targeted fixes:</p>
+    <p><strong>Layer 1 — rules attach to shape, not location.</strong> Re-key every Biome rule to file <em>suffixes and folder shapes</em> (<code>**/*.core.ts</code>, <code>**/features/**</code>, <code>**/platform/config.ts</code>) with a global-deny / sanctioned-allow structure. Any app, named anything, added later, inherits the full discipline by construction — renames cannot fail open.</p>
+    <p><strong>Layer 2 — the harness checks itself.</strong> A <code>doctor</code> gate (pure core + thin shell, like every other slice) structurally asserts the enforcement stack: Biome overrides and plugins present, hooks wired, CI job names ⊇ ruleset required checks, actions SHA-pinned, every workspace typechecked, canon sync intact. Deleting a gate stops being silent drift and becomes a visible, deliberate act that fails <code>bun run test</code>.</p>
+    <p><strong>Targeted fixes:</strong> a GritQL rule banning <code>.json() as T</code> (the cast that neutralized the descendant's typed RPC), <code>delete_branch_on_merge</code> in the governance script (kills the empty re-merge PR class), and a canon axiom + eval task that ratchet the property permanently.</p>
+    <figure>
+      <svg viewBox="0 0 680 250" width="100%" height="auto" role="img"
+           aria-labelledby="solTitle" preserveAspectRatio="xMidYMid meet">
+        <title id="solTitle">Shape-scoped rules plus a doctor watching the gates</title>
+        <desc>File badges core, io, routes, features each carry an attached rule shield regardless of location; below, a doctor eye watches a row of gate boxes: biome, hooks, CI, ruleset.</desc>
+        <defs>
+          <marker id="arrow-sol" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+        <g font-family="var(--mono)" font-size="13">
+          <rect x="42" y="30" width="130" height="40" rx="8" fill="var(--surface)" stroke="var(--ok)" stroke-width="2"/>
+          <text x="107" y="55" text-anchor="middle" fill="var(--text)">*.core.ts</text>
+          <rect x="192" y="30" width="130" height="40" rx="8" fill="var(--surface)" stroke="var(--ok)" stroke-width="2"/>
+          <text x="257" y="55" text-anchor="middle" fill="var(--text)">*.io.ts</text>
+          <rect x="342" y="30" width="150" height="40" rx="8" fill="var(--surface)" stroke="var(--ok)" stroke-width="2"/>
+          <text x="417" y="55" text-anchor="middle" fill="var(--text)">features/**</text>
+          <rect x="512" y="30" width="130" height="40" rx="8" fill="var(--surface)" stroke="var(--ok)" stroke-width="2"/>
+          <text x="577" y="55" text-anchor="middle" fill="var(--text)">config.ts</text>
+        </g>
+        <text x="340" y="98" text-anchor="middle" fill="var(--ok)" font-family="var(--font)" font-size="13">rules ride the shape — any path, any app</text>
+        <circle cx="120" cy="180" r="16" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <circle cx="120" cy="180" r="5" fill="var(--accent)"/>
+        <text x="120" y="222" text-anchor="middle" fill="var(--accent)" font-family="var(--font)" font-size="13">doctor</text>
+        <g font-family="var(--mono)" font-size="13">
+          <rect x="210" y="158" width="90" height="42" rx="8" fill="var(--surface-2)" stroke="var(--border)"/>
+          <text x="255" y="184" text-anchor="middle" fill="var(--text)">biome</text>
+          <rect x="315" y="158" width="90" height="42" rx="8" fill="var(--surface-2)" stroke="var(--border)"/>
+          <text x="360" y="184" text-anchor="middle" fill="var(--text)">hooks</text>
+          <rect x="420" y="158" width="90" height="42" rx="8" fill="var(--surface-2)" stroke="var(--border)"/>
+          <text x="465" y="184" text-anchor="middle" fill="var(--text)">CI</text>
+          <rect x="525" y="158" width="110" height="42" rx="8" fill="var(--surface-2)" stroke="var(--border)"/>
+          <text x="580" y="184" text-anchor="middle" fill="var(--text)">ruleset</text>
+        </g>
+        <line x1="140" y1="180" x2="202" y2="180" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-sol)"/>
+      </svg>
+      <figcaption>Layer 1: enforcement attached to file shape. Layer 2: the doctor asserts the gates themselves exist.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ===== RELEVANT FILES ===== -->
+  <section id="files" class="files">
+    <h2>Relevant Files</h2>
+
+    <h3>Existing Files</h3>
+    <ul>
+      <li><span class="tag existing">existing</span> <code>biome.json</code> — the path-scoped overrides to re-key (process funnel, door bans); plugin registry</li>
+      <li><span class="tag existing">existing</span> <code>package.json</code> — wire <code>doctor</code> into <code>test</code>; add <code>doctor</code> script</li>
+      <li><span class="tag existing">existing</span> <code>lefthook.yml</code> — doctor asserts its jobs (commit-msg, pre-push typecheck + audit)</li>
+      <li><span class="tag existing">existing</span> <code>.github/workflows/ci.yml</code> — doctor asserts job names ⊇ ruleset contexts, SHA pins, bun-version-file</li>
+      <li><span class="tag existing">existing</span> <code>.github/rulesets/main.json</code> — the contract side of the name check</li>
+      <li><span class="tag existing">existing</span> <code>.github/scripts/apply-ruleset.sh</code> — gains <code>delete_branch_on_merge=true</code></li>
+      <li><span class="tag existing">existing</span> <code>scripts/check-colocated-tests.ts</code> — pattern to follow for the doctor's shell + wiring</li>
+      <li><span class="tag existing">existing</span> <code>scripts/docs-sync.test.ts</code> — doctor asserts it exists; canon markers checked</li>
+      <li><span class="tag existing">existing</span> <code>biome-plugins/max-one-param-declarations.grit</code> — dialect reference for the new plugin (incl. the <code>$params &lt;: [$p1, $p2, ...]</code> arity idiom and biome's grit formatting)</li>
+      <li><span class="tag existing">existing</span> <code>CLAUDE.md</code> + <code>AGENTS.md</code> — new canon axiom (byte-identical between markers)</li>
+      <li><span class="tag existing">existing</span> <code>docs/governance.md</code> — decay-resistance + merge-hygiene documentation</li>
+      <li><span class="tag existing">existing</span> <code>evals/tasks.jsonl</code> — new rename-survival eval task</li>
+      <li><span class="tag existing">existing</span> <code>apps/e2e/playwright.config.ts</code>, <code>apps/web/vite.config.ts</code>, <code>apps/server/src/main.ts</code> — sanctioned <code>process</code> sites the re-scoping must allow</li>
+    </ul>
+
+    <h3>New Files</h3>
+    <ul>
+      <li><span class="tag new">new</span> <code>scripts/harness-doctor.core.ts</code> — PURE checks: parsed configs in, findings out (eats the repo's own impureim dogfood; colocation gate will demand its test)</li>
+      <li><span class="tag new">new</span> <code>scripts/harness-doctor.core.test.ts</code> — tampered-fixture tests, one per decay class</li>
+      <li><span class="tag new">new</span> <code>scripts/check-harness.ts</code> — thin shell: read files (<code>Bun.YAML.parse</code> — verified available in Bun 1.3.6), run core checks, print axiom-named findings with remediation, exit 1</li>
+      <li><span class="tag new">new</span> <code>biome-plugins/no-cast-json.grit</code> — bans <code>$x.json() as $t</code> outside tests: decode with shared Schema helpers instead</li>
+    </ul>
+  </section>
+
+  <!-- ===== IMPLEMENTATION PHASES ===== -->
+  <section id="phases">
+    <h2>Implementation Phases</h2>
+    <p><strong>IMPORTANT:</strong> Execute every phase and task step by step, in order, top to bottom.</p>
+    <p>Status markers: <code>[]</code> idle · <code>[wip]</code> in progress · <code>[x]</code> complete · <code>[f]</code> failed. All start as <code>[]</code>; the Build Plan workflow updates them as it works.</p>
+
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 1: Fail-closed rule scoping</h3>
+      <p>Invert the Biome structure from “deny inside these paths” to “deny globally, allow at sanctioned shapes”. After this phase, renaming <code>apps/server</code> to anything — or adding a sixth app — changes nothing about what is enforced. The <code>fetch</code> ban already has this structure (global deny + <code>*.io.ts</code> allow, PR #12); this phase brings <code>process</code> and the cross-slice door bans to parity.</p>
+
+      <h4>1. Re-key the <code>process</code> funnel</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Move the <code>process</code> denial from the <code>apps/server/src/**</code> override into the top-level <code>noRestrictedGlobals</code> (alongside <code>fetch</code>), message: “read env through the typed config funnel (<code>platform/config.ts</code>)”</li>
+        <li><code class="status">[]</code> Add sanctioned-allow overrides (re-declare <code>noRestrictedGlobals</code> without <code>process</code>, keeping <code>fetch</code> denied where applicable) for: <code>**/platform/config.ts</code>, <code>**/main.ts</code>, <code>scripts/**</code>, <code>infra/**</code>, <code>**/vite.config.ts</code>, <code>**/playwright.config.ts</code></li>
+        <li><code class="status">[]</code> Remember overrides replace rule options wholesale (verified empirically in PR #12) — each allow override must restate the full intended denied set, not a delta</li>
+        <li><code class="status">[]</code> Run explicit-path lint over the whole tree; fix any newly flagged legitimate site by routing it through config, or add it to the sanctioned list with a comment saying why</li>
+      </ul>
+
+      <h4>2. Re-key the module-boundary door bans</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Change the cross-slice <code>noRestrictedImports</code> override's <code>includes</code> from <code>apps/server/src/features/**</code> to <code>**/features/**</code> — web features (and any future app's features) get doors for free</li>
+        <li><code class="status">[]</code> Keep the pattern list (<code>../*/*.{core,io,routes}</code>) and extend with a web-relevant pattern if needed (sibling-feature deep imports)</li>
+        <li><code class="status">[]</code> Verify the template's own web features (health, notes) still lint clean; fix if the notes web feature back-channels anything</li>
+      </ul>
+
+      <h4>3. Rename-survival probe</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> In a scratch dir (never committed): copy <code>apps/server</code> as <code>apps/daemon</code>, drop a violation into <code>daemon/.../x.core.ts</code> (e.g. <code>Date.now()</code>) and a <code>process.env</code> read into a routes file, run <code>bunx biome check --config-path=&lt;repo&gt;</code> against it, assert BOTH are flagged</li>
+        <li><code class="status">[]</code> Record the probe as a reusable fixture inside the doctor's core tests (phase 2) so the property is regression-tested, not just spot-checked once</li>
+      </ul>
+
+      <h4>4. Testing Strategy</h4>
+      <p>Explicit-path Biome runs (worktree quirk: bare <code>.</code> lints 0 files from inside <code>.claude/worktrees</code>) plus the rename probe above. Edge cases: config files that legitimately read <code>process</code> (vite/playwright), scripts, infra.</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bunx biome ci apps shared scripts infra biome-plugins biome.json</code> — zero diagnostics on the real tree</li>
+        <li><code class="status">[]</code> rename probe (task 3) — violations still fire under a renamed app</li>
+        <li><code class="status">[]</code> <code>bun run verify</code> — full gate suite still green</li>
+      </ul>
+      <div class="loop">
+        🔁 <strong>Do not exit this phase until every box above is checked.</strong>
+        If any command fails, fix the cause and re-run — loop until all pass.
+      </div>
+    </div>
+
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 2: The doctor — <code>scripts/check-harness.ts</code></h3>
+      <p>A meta-gate that structurally asserts the enforcement stack itself, wired into <code>bun run test</code> so it runs in the required <code>test</code> CI check, pre-push (via <code>verify</code>), and locally. Structure mirrors the repo's own axiom: <code>harness-doctor.core.ts</code> is pure (parsed config objects in → findings out), <code>check-harness.ts</code> is the I/O shell. The colocation gate will itself demand the core's test — the harness guards its own guard.</p>
+
+      <figure>
+        <svg viewBox="0 0 680 200" width="100%" height="auto" role="img"
+             aria-labelledby="docTitle" preserveAspectRatio="xMidYMid meet">
+          <title id="docTitle">Doctor architecture: impure read, pure checks, loud exit</title>
+          <desc>Shell reads config files and parses them, passes plain data to pure check functions, findings flow to a fail exit.</desc>
+          <defs>
+            <marker id="arrow-doc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+          <g font-family="var(--mono)" font-size="13">
+            <rect x="30" y="70" width="170" height="60" rx="10" fill="var(--surface)" stroke="var(--border)" stroke-width="2"/>
+            <text x="115" y="97" text-anchor="middle" fill="var(--text)">read + parse</text>
+            <text x="115" y="117" text-anchor="middle" fill="var(--muted)" font-size="11">shell (impure)</text>
+            <rect x="255" y="70" width="170" height="60" rx="10" fill="var(--surface)" stroke="var(--ok)" stroke-width="2.5"/>
+            <text x="340" y="97" text-anchor="middle" fill="var(--text)">checks</text>
+            <text x="340" y="117" text-anchor="middle" fill="var(--ok)" font-size="11">core (pure)</text>
+            <rect x="480" y="70" width="170" height="60" rx="10" fill="var(--surface)" stroke="var(--danger)" stroke-width="2"/>
+            <text x="565" y="97" text-anchor="middle" fill="var(--text)">findings → exit 1</text>
+            <text x="565" y="117" text-anchor="middle" fill="var(--muted)" font-size="11">axiom-named, loud</text>
+          </g>
+          <line x1="200" y1="100" x2="247" y2="100" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-doc)"/>
+          <line x1="425" y1="100" x2="472" y2="100" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-doc)"/>
+        </svg>
+        <figcaption>The doctor is itself an impureim sandwich — its pure core is colocation-tested like any slice.</figcaption>
+      </figure>
+
+      <h4>1. Pure core: <code>scripts/harness-doctor.core.ts</code></h4>
+      <p>Each check takes plain parsed data and returns findings <code>{ axiom, problem, remedy }[]</code>. Checks are structural (keys/shapes present), never byte-equality, so legitimate config evolution doesn't false-positive. Checks to implement:</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>checkBiome</code>: core-purity override exists for <code>**/*.core.ts</code> with deniedGlobals ⊇ {Date, Promise, console, process, setTimeout, setInterval} and the effect-runtime import ban; all four grit plugins registered (no-throw, no-await, max-one-param, no-cast-json); a <code>**/features/**</code> door-ban override exists; top-level fetch+process denials present; <code>*.io.ts</code> fetch-allow override present</li>
+        <li><code class="status">[]</code> <code>checkHooks</code> (parsed lefthook.yml): pre-commit biome job, commit-msg conventional job, pre-push typecheck + audit jobs exist</li>
+        <li><code class="status">[]</code> <code>checkCiContract</code> (parsed ci.yml + rulesets/main.json): CI job names ⊇ ruleset <code>required_status_checks</code> contexts; ruleset file exists (the descendant lost a day to exactly this mismatch — say so in the finding's remedy text)</li>
+        <li><code class="status">[]</code> <code>checkSupplyChain</code> (raw workflow text): every <code>uses:</code> is SHA-pinned (40-hex); <code>.bun-version</code> exists and workflows reference <code>bun-version-file</code></li>
+        <li><code class="status">[]</code> <code>checkTypecheckCoverage</code> (root package.json workspaces + root tsconfig): every workspace glob match has a project reference in the <code>tsc -b</code> graph — a new app that isn't typechecked is a finding</li>
+        <li><code class="status">[]</code> <code>checkCanonSync</code>: CLAUDE.md and AGENTS.md both exist with <code>axioms:start/end</code> markers; <code>scripts/docs-sync.test.ts</code> exists</li>
+        <li><code class="status">[]</code> <code>checkScriptWiring</code> (root package.json): <code>verify</code> chains lint:ci + typecheck + test + audit; <code>test</code> includes colocation check and the doctor itself</li>
+      </ul>
+
+      <h4>2. Shell + wiring</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>scripts/check-harness.ts</code>: read/parse the real files (<code>Bun.YAML.parse</code> for YAML — verified present in Bun 1.3.6; JSON.parse elsewhere), run all checks, print each finding as <code>✖ [axiom] problem → remedy</code>, exit 1 on any</li>
+        <li><code class="status">[]</code> package.json: <code>"doctor": "bun run scripts/check-harness.ts"</code>; prepend to <code>test</code>: <code>check-colocated-tests && check-harness && bun test …</code></li>
+        <li><code class="status">[]</code> Keep it fast (&lt;150ms) and dependency-free — it runs on every test invocation</li>
+        <li><code class="status">[]</code> Doctor must be shape-agnostic (no <code>apps/server</code> literals) so it keeps working in renamed descendants — that is its entire purpose; assert this in review</li>
+      </ul>
+
+      <h4>3. Red-team tests: <code>harness-doctor.core.test.ts</code></h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> One tampered fixture per decay class from the descendant audit: delete the core-purity override → finding; drop commit-msg hook → finding; rename a CI job without touching the ruleset → finding; unpin one action → finding; add a workspace without a tsconfig reference → finding; strip the canon markers → finding</li>
+        <li><code class="status">[]</code> One green fixture: the repo's real current configs (read once in the shell test-helper, passed as data) produce zero findings</li>
+      </ul>
+
+      <h4>4. Testing Strategy</h4>
+      <p>Unit tests over pure checks with tampered fixtures (above), plus a live red-team: temporarily break a real config, watch the doctor fail, restore.</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bun test scripts</code> — doctor core tests pass, incl. all tamper fixtures</li>
+        <li><code class="status">[]</code> <code>bun run doctor</code> — exit 0 on the real repo</li>
+        <li><code class="status">[]</code> live red-team: comment out the grit plugins in biome.json → <code>bun run doctor</code> exits 1 with the right axiom named → restore → exits 0</li>
+        <li><code class="status">[]</code> <code>bun run test</code> — doctor runs inside the test gate</li>
+      </ul>
+      <div class="loop">
+        🔁 <strong>Do not exit this phase until every box above is checked.</strong>
+        If any command fails, fix the cause and re-run — loop until all pass.
+      </div>
+    </div>
+
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 3: Boundary-cast ban — <code>no-cast-json.grit</code></h3>
+      <p>The descendant's typed RPC died by a thousand casts: <code>res.json() as T</code> compiles forever and validates nothing. Ban the cast at the source; the shared <code>decode*</code> helpers are the sanctioned alternative and already exist.</p>
+
+      <h4>1. Author + register the plugin</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>biome-plugins/no-cast-json.grit</code> matching <code>$x.json() as $t</code> (cover the <code>await</code>-wrapped and parenthesized forms; study <code>max-one-param-declarations.grit</code> for the dialect and formatting — biome formats .grit files, run <code>biome check --write biome-plugins/</code> before committing, this cost a red CI run in PR #12)</li>
+        <li><code class="status">[]</code> Register via an override scoped <code>["**/*.ts", "**/*.tsx", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.spec.ts"]</code> — tests may cast to assert raw shapes</li>
+        <li><code class="status">[]</code> Message: “casting <code>.json()</code> asserts without validating — decode with the shared Schema helpers (<code>decode*</code> in shared/src) so contract drift fails loudly”</li>
+      </ul>
+
+      <h4>2. Probe + sweep</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Scratch probes (isolated dir, biome search's match counter is unreliable — use <code>biome check --reporter=json</code> ground truth, as established for the max-params plugin): MUST flag <code>const a = (await res.json()) as Foo</code>; MUST NOT flag a test file, nor <code>decodeHealthStatus(await res.json())</code></li>
+        <li><code class="status">[]</code> Run over the real tree; the template's web features already decode — fix anything that slips out</li>
+        <li><code class="status">[]</code> Add the plugin to the doctor's required-plugins list (phase 2 checkBiome)</li>
+      </ul>
+
+      <h4>3. Testing Strategy</h4>
+      <p>Probe files against the repo config, then the full explicit-path lint.</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> probe MUST-flag / MUST-NOT-flag matrix passes</li>
+        <li><code class="status">[]</code> <code>bunx biome ci apps shared scripts infra biome-plugins biome.json</code> — clean</li>
+        <li><code class="status">[]</code> <code>bun run doctor</code> — still green with 4-plugin assertion</li>
+      </ul>
+      <div class="loop">
+        🔁 <strong>Do not exit this phase until every box above is checked.</strong>
+        If any command fails, fix the cause and re-run — loop until all pass.
+      </div>
+    </div>
+
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 4: Merge hygiene + governance-as-code</h3>
+      <p>37% of the descendant's merged PRs were empty re-merges: squash-merge leaves the worktree branch “ahead”, so the ship loop re-PRs it. The structural fix is a repo setting, applied by the same script that owns the ruleset.</p>
+
+      <h4>1. Repo setting + docs</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>.github/scripts/apply-ruleset.sh</code>: add <code>gh api repos/{owner}/{repo} -X PATCH -f delete_branch_on_merge=true</code> (idempotent, same auth story as the ruleset apply; keep the script's existing error-handling style)</li>
+        <li><code class="status">[]</code> <code>docs/governance.md</code>: new subsection — why head branches must die on merge (cite the 37% empty-re-merge figure and mechanism), and that agent ship loops must check <code>gh pr list --head</code> before opening a PR</li>
+        <li><code class="status">[]</code> <code>docs/getting-started.md</code>: mention the setting is applied by the ruleset script</li>
+      </ul>
+
+      <h4>2. Testing Strategy</h4>
+      <p>Script is idempotent shell; validate by shellcheck-style review and a dry-run flag if the script has one — the live PATCH needs admin auth and is exercised at repo-setup time, not CI.</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bash -n .github/scripts/apply-ruleset.sh</code> — parses</li>
+        <li><code class="status">[]</code> zizmor CI job stays green (script changes don't introduce workflow smells)</li>
+      </ul>
+      <div class="loop">
+        🔁 <strong>Do not exit this phase until every box above is checked.</strong>
+        If any command fails, fix the cause and re-run — loop until all pass.
+      </div>
+    </div>
+
+    <div class="phase">
+      <h3><code class="status">[]</code> Phase 5: Canon axiom + eval ratchet</h3>
+      <p>Make the property part of the repo's contract so it survives <em>this</em> repo's own churn: a canon bullet (synced CLAUDE.md/AGENTS.md) and an eval task that rehearses the exact decay scenario.</p>
+
+      <h4>1. Canon + docs</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> New “Other axioms” bullet in BOTH canon files (byte-identical, docs-sync gates it): <strong>“The harness checks itself.”</strong> — rules attach to file shape, not paths (renames fail closed); <code>bun run doctor</code> (in the <code>test</code> gate) asserts the enforcement stack: biome overrides + plugins, hooks, CI↔ruleset name contract, pinned actions, typecheck coverage, canon sync. Deleting a gate is a deliberate, visible act. Motivated by a descendant audit where every path-scoped rule silently died on an app rename</li>
+        <li><code class="status">[]</code> Gate-commands block: add <code>bun run doctor</code> with a one-line description</li>
+        <li><code class="status">[]</code> <code>docs/governance.md</code>: “decay resistance” section — what a fork inherits by construction, what the doctor will refuse to let rot silently</li>
+      </ul>
+
+      <h4>2. Eval task</h4>
+      <ul class="checklist">
+        <li><code class="status">[]</code> Append to <code>evals/tasks.jsonl</code>: <em>“Rename <code>apps/server</code> to <code>apps/api</code> (git mv), update references until <code>bun run verify</code> passes. The purity and config-funnel rules must still fire — prove it by temporarily adding a <code>Date.now()</code> to a core file and showing lint fails — then remove the probe and finish green.”</em> — rehearses the exact pi-browser decay path</li>
+      </ul>
+
+      <h4>3. Testing Strategy</h4>
+      <p>The docs-sync test gates the canon edit; the doctor gates its own mention; jsonl is validated by parsing.</p>
+      <ul class="checklist">
+        <li><code class="status">[]</code> <code>bun test scripts/docs-sync.test.ts</code> — canon still byte-identical</li>
+        <li><code class="status">[]</code> <code>bun -e 'for (const l of (await Bun.file("evals/tasks.jsonl").text()).trim().split("\n")) JSON.parse(l)'</code> — tasks file stays valid JSONL</li>
+        <li><code class="status">[]</code> <code>bun run verify</code> — everything green together</li>
+      </ul>
+      <div class="loop">
+        🔁 <strong>Do not exit this phase until every box above is checked.</strong>
+        If any command fails, fix the cause and re-run — loop until all pass.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== GLOBAL VALIDATION ===== -->
+  <section id="validation">
+    <h2>Validation Commands</h2>
+    <p>Execute these commands to validate the entire plan is complete:</p>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>bun run verify</code> — lint (incl. both new grit rules) + typecheck + test (incl. doctor + colocation) + audit, one shot</li>
+      <li><code class="status">[]</code> <code>bun run doctor</code> — exit 0; then live red-team one gate (comment a plugin out) → exit 1 with axiom-named finding → restore</li>
+      <li><code class="status">[]</code> rename-survival probe — copy an app dir under a new name, plant core/config violations, biome flags both</li>
+      <li><code class="status">[]</code> <code>bun run scaffold:slice smoke-demo && bun run verify</code> — scaffolder still green under the re-keyed rules (then revert the throwaway slice)</li>
+      <li><code class="status">[]</code> <code>bun test scripts/docs-sync.test.ts</code> — canon sync intact</li>
+    </ul>
+    <div class="loop">
+      🔁 <strong>The plan is not complete until every box is checked and every command passes. If for some reason a step is not possible to complete, mark it with [f] and move on if possible.</strong>
+    </div>
+  </section>
+
+  <!-- ===== NOTES ===== -->
+  <section id="notes">
+    <h2>Notes</h2>
+
+    <h3>Evidence → countermeasure traceability</h3>
+    <table>
+      <tr><th>pi-browser-dashboard finding</th><th>Countermeasure (phase)</th></tr>
+      <tr><td>server→daemon rename evaporated every path-scoped rule</td><td>Suffix/shape scoping + rename probe (1), rename eval (5)</td></tr>
+      <tr><td>Typecheck absent from the entire pipeline</td><td>Doctor <code>checkTypecheckCoverage</code> + <code>checkScriptWiring</code> (2)</td></tr>
+      <tr><td>Web tier shipped with zero boundary rules; god components + cross-feature imports</td><td><code>**/features/**</code> door bans (1)</td></tr>
+      <tr><td><code>api as any</code> / <code>res.json() as T</code> neutralized typed RPC</td><td><code>no-cast-json.grit</code> (3); <code>noExplicitAny</code> already covers <code>as any</code></td></tr>
+      <tr><td>22/59 empty re-merge PRs; uncommitted ruleset; unpinned actions; job-rename merge blockage</td><td><code>delete_branch_on_merge</code> (4); doctor CI↔ruleset + SHA-pin checks (2)</td></tr>
+      <tr><td>AGENTS.md → 24KB unenforced prose; canon sync deleted</td><td>Doctor <code>checkCanonSync</code> (2); enforcement-biased canon bullet (5)</td></tr>
+      <tr><td>Retro loop ran once, produced an unwired script</td><td>Out of scope here — the eval ratchet (5) is the counterweight this plan adds</td></tr>
+    </table>
+
+    <h3>Design decisions &amp; rejected approaches</h3>
+    <details>
+      <summary>Tamper-proofing is a non-goal</summary>
+      <p class="qa-answer">A repo owner can delete the doctor too. The goal is converting <em>silent, incremental</em> decay (a rename that no tool notices) into <em>loud, deliberate</em> acts (a diff that removes a named gate and a failing test). That is the same bet the whole template makes: enforcements compound because ignoring them requires visible effort.</p>
+    </details>
+    <details>
+      <summary>Why structural asserts, not byte-equality, in the doctor</summary>
+      <p class="qa-answer">Byte-comparing configs against golden copies would make every legitimate evolution a doctor failure — that teaches people to delete the doctor (the pi repo's fate for stricter gates). Asserting shapes (“an override matching <code>**/*.core.ts</code> denies <code>Date</code>”) permits growth while catching removal.</p>
+    </details>
+    <details>
+      <summary>Template-sync action (pushing enforcement-file updates to descendants) — deferred to v2</summary>
+      <p class="qa-answer">A scheduled action PRing the template's <code>biome.json</code>/<code>biome-plugins/</code>/workflow diffs into forks would close the “template improved after you forked” gap. Deferred: cross-repo auth, merge-conflict UX, and descendant opt-in make it a project of its own. The doctor is deliberately shape-agnostic so a future sync lands cleanly.</p>
+    </details>
+    <details>
+      <summary>Why the doctor lives inside <code>bun run test</code> rather than its own CI job</summary>
+      <p class="qa-answer">A dedicated job can be deleted together with its gate in one commit and the ruleset would block on a missing check only if the ruleset survived. Inside <code>test</code> — a required check that also runs pre-push and in the scaffold smoke — removal requires editing <code>package.json</code>'s test script, the most-watched file in the repo. Belt: <code>checkScriptWiring</code> asserts the composition.</p>
+    </details>
+    <details>
+      <summary>Known limits</summary>
+      <p class="qa-answer">(a) The doctor cannot verify GitHub's <em>live</em> ruleset/settings offline — it checks the committed contract; <code>apply-ruleset.sh</code> remains the reconciliation tool. (b) Grit's <code>$x.json() as $t</code> may need multiple branches for parenthesization, same as the max-params plugin's 6 branches — budget probe time. (c) Suffix scoping can't stop someone writing all logic in <code>routes.ts</code> (the “enforcement can't reach design” critique) — the mutation-testing incentive question stays open, tracked for a future retro.</p>
+    </details>
+
+    <h3>Operational gotchas for the builder</h3>
+    <p>From this session's scars: inside <code>.claude/worktrees</code>, bare-path Biome lints 0 files (pass explicit paths incl. <code>biome-plugins/</code>); purge <code>*.tsbuildinfo</code> before trusting <code>tsc -b</code>; Biome <em>formats</em> <code>.grit</code> files — run <code>--write</code> on them before committing; push with an explicit refspec when branch names differ.</p>
+  </section>
+
+  <!-- ===== AMENDMENTS ===== -->
+  <section id="amendments">
+    <h2>Amendments</h2>
+    <!-- Populated by the Update Plan / Update References workflows — append-only, newest at the bottom. -->
+  </section>
+
+</main>
+</body>
+</html>
