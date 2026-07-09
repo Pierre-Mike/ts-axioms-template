@@ -86,6 +86,7 @@
         "**/platform/config.ts",
         "scripts/**",
         "infra/**",
+        ".claude/hooks/**",
         "**/vite.config.ts",
         "**/playwright.config.ts"
       ],
