@@ -11,7 +11,7 @@ Trunk-based flow. `main` is protected (see [governance.md](./governance.md)).
    bun run lint:ci     # biome ci .
    bun run typecheck   # tsc -b
    bun test            # co-located unit tests
-   bun run audit       # fallow full-repo scan
+   bun run audit       # fallow: dead-code + dupes full-repo; audit gates diff vs main
    ```
    The Lefthook `pre-commit` hook auto-formats staged files with Biome and
    re-stages them; `pre-push` runs the fallow scan + `tsc -b`.
@@ -22,7 +22,7 @@ Trunk-based flow. `main` is protected (see [governance.md](./governance.md)).
 ## PR checklist (enforced by template)
 
 - Axioms followed — pure core, Effect at the boundary only, named params for
-  3+ args, no raw `fetch`/`axios`.
+  2+ args (a single options object), no raw `fetch`/`axios`.
 - Tests co-located (`*.test.ts` next to source, never `__tests__/`).
 - fallow scan clean (no dead code, duplication, or circular deps).
 

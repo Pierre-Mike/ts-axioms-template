@@ -39,6 +39,26 @@ verifies the deploy end-to-end.
 Optional config: `ts-axioms:serviceName` (default `ts-axioms-server`),
 `ts-axioms:appVersion` (default `0.0.0`, surfaced by `/health`).
 
+> [!WARNING]
+> The reference GCP adapter is a demo posture, not a production one:
+>
+> - **The service is public and write-capable.** `targets/gcp.ts` grants
+>   `roles/run.invoker` to `allUsers` — anyone on the internet can call every
+>   route, including `POST /notes`. Put auth in front (IAM invoker binding,
+>   IAP, or an app-level auth middleware) before deploying anything real.
+> - **Note data is ephemeral and per-instance.** `bun:sqlite` writes to the
+>   container's local filesystem; on Cloud Run that disk is in-memory and
+>   per-replica. Notes are lost on every restart, deploy, or scale-to-zero,
+>   and each replica keeps its own database — `NOTE_LIMIT` becomes a
+>   per-replica limit. Use a managed database for real persistence.
+
+> [!NOTE]
+> `pulumi preview` is not read-only here: the `docker-build` image is built
+> during preview, so it needs a running local Docker daemon. GCP calls
+> authenticate via Application Default Credentials — run
+> `gcloud auth application-default login` (and `gcloud auth configure-docker
+> <region>-docker.pkg.dev` before `up` pushes the image).
+
 ## Adding a provider (aws / azure / cloudflare)
 
 Targets are valid config the moment they parse, but unimplemented ones fail

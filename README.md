@@ -41,7 +41,7 @@ bun run verify     # the four CI gates, one shot
 bun run lint:ci    # biome ci . (+ GritQL purity plugins, openapi freshness in CI)
 bun run typecheck  # tsc -b
 bun run test       # core/test colocation check + co-located unit tests
-bun run audit      # fallow full-repo scan (CI adds `bun audit` for vulnerabilities)
+bun run audit      # fallow dead-code + dupes + diff-scoped audit gates (CI adds `bun audit`)
 ```
 
 These four are the CI jobs (`lint` / `typecheck` / `test` / `audit`) and the
