@@ -26,7 +26,11 @@ export const buildNotesApp = (runtime: NotesRouteRuntime) =>
     .post(
       "/",
       validator("json", (value) => {
-        const record = value as { readonly text?: unknown }
+        // Boundary parsing only: `null` is valid JSON, so guard before reading
+        // `.text` — a non-object body degrades to "" and the pure core's
+        // validateText turns it into the typed InvalidNoteText 400.
+        const record =
+          typeof value === "object" && value !== null ? (value as { readonly text?: unknown }) : {}
         return { text: typeof record.text === "string" ? record.text : "" }
       }),
       async (c) => {
