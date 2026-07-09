@@ -144,13 +144,15 @@ decide → impure write). Study whichever is closer to your slice, then:
 
 1. `bun run scaffold:slice <feature>` — generates the slice files in the
    canonical shape, mounts the route in `api.ts` over the shared `appRuntime`,
-   and registers the live Layer in `platform/runtime.ts`. Never hand-copy a
-   slice.
+   registers the live Layer in `platform/runtime.ts`, registers a stub OpenAPI
+   path in `scripts/generate-openapi.ts`, and regenerates `openapi.json`.
+   Never hand-copy a slice.
 2. Implement the real pure logic in `<feature>.core.ts` + its co-located test.
 3. Replace the stub I/O in `<feature>.io.ts`.
 4. Map new error tags in `platform/http.ts`.
-5. Promote contracts to `shared/src` when the web consumes them; register the
-   path in `scripts/generate-openapi.ts` and run `bun run openapi:gen`.
+5. Promote contracts to `shared/src` when the web consumes them; grow the
+   scaffolded stub entry in `scripts/generate-openapi.ts` and re-run
+   `bun run openapi:gen`.
 6. (web) add `<feature>.queries.ts` (queryOptions once, decode with the shared
    schema) + `<feature>.route.tsx`.
 7. `bun run verify`.

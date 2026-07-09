@@ -254,6 +254,54 @@ http = http.replace(statusAnchor, (m) => `${m}  Invalid${pascal}Id: 400,\n`)
 await Bun.write(httpPath, http)
 console.error(`registered Invalid${pascal}Id: 400 in apps/server/src/platform/http.ts`)
 
+// --- register a stub OpenAPI path in scripts/generate-openapi.ts -------------
+// The generator's route<->spec parity check fails on any undocumented route,
+// and verify chains openapi:check — so the scaffolded GET /<name> must be
+// documented and openapi.json regenerated for "scaffold -> verify" to be
+// green by construction.
+
+const openapiScriptPath = join(root, "scripts/generate-openapi.ts")
+let openapiScript = await Bun.file(openapiScriptPath).text()
+const pathsAnchor = /\n {2}paths: \{\n/
+if (!pathsAnchor.test(openapiScript)) {
+  fail("generate-openapi.ts anchor not found: expected `paths: {`")
+}
+// Prepend as the FIRST paths entry — position-stable regardless of what the
+// existing entries contain (same trick as the runtime.ts mergeAll insert).
+const specEntry = `    "/${name}": {
+      get: {
+        summary: "Scaffolded ${name} stub",
+        parameters: [
+          {
+            name: "id",
+            in: "query",
+            required: false,
+            schema: { type: "string" },
+            description: "Echoed id; missing or blank fails as Invalid${pascal}Id (400).",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Scaffolded ${name} payload.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { id: { type: "string" }, message: { type: "string" } },
+                  required: ["id", "message"],
+                },
+              },
+            },
+          },
+          "400": errorResponse,
+        },
+      },
+    },
+`
+openapiScript = openapiScript.replace(pathsAnchor, (m) => `${m}${specEntry}`)
+await Bun.write(openapiScriptPath, openapiScript)
+console.error(`registered GET /${name} in scripts/generate-openapi.ts`)
+
 // --- normalize formatting so the result is lint:ci-clean out of the box ------
 
 Bun.spawnSync(
@@ -267,9 +315,21 @@ Bun.spawnSync(
     apiPath,
     runtimePath,
     httpPath,
+    openapiScriptPath,
   ],
   { cwd: root, stdout: "inherit", stderr: "inherit" },
 )
+
+// --- regenerate openapi.json so openapi:check (inside verify) stays green ----
+
+const gen = Bun.spawnSync(["bun", "run", openapiScriptPath], {
+  cwd: root,
+  stdout: "inherit",
+  stderr: "inherit",
+})
+if (gen.exitCode !== 0) {
+  fail("openapi.json regeneration failed — check scripts/generate-openapi.ts")
+}
 
 console.error(`
 next steps:
@@ -278,6 +338,8 @@ next steps:
   3. map any NEW error tags in platform/http.ts STATUS_BY_TAG (Invalid${pascal}Id is
      already registered; the allowlist redacts unregistered tags to a 500)
   4. (web) add ${name}.queries.ts + ${name}.route.tsx; promote contracts to shared/
-  5. bun run openapi:gen   # register the path in scripts/generate-openapi.ts
+  5. grow the stub GET /${name} entry in scripts/generate-openapi.ts as the route
+     surface evolves (it is already registered and openapi.json regenerated),
+     then re-run: bun run openapi:gen
   6. bun run verify
 `)
