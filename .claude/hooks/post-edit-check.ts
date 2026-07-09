@@ -4,12 +4,14 @@
  * Runs Biome on just the edited file so an impureim violation surfaces in the
  * SAME agent turn. Exit code 2 feeds stderr back to the agent as a correction.
  */
-interface HookInput {
-  readonly tool_input?: { readonly file_path?: string }
-}
-
-const payload = (await Bun.stdin.json()) as HookInput
-const file = payload.tool_input?.file_path
+const payload: unknown = await Bun.stdin.json()
+const record =
+  typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {}
+const toolInput =
+  typeof record.tool_input === "object" && record.tool_input !== null
+    ? (record.tool_input as Record<string, unknown>)
+    : {}
+const file = typeof toolInput.file_path === "string" ? toolInput.file_path : undefined
 
 if (!file || !/\.(ts|tsx|js|jsx|json|jsonc)$/.test(file)) process.exit(0)
 

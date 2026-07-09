@@ -22,7 +22,8 @@ install`).
 ## 3. One-time repo settings
 
 ```bash
-# Branch protection (needs gh + repo admin; GITHUB_TOKEN cannot manage rulesets):
+# Branch protection + delete_branch_on_merge (needs gh + repo admin;
+# GITHUB_TOKEN cannot manage rulesets):
 ./.github/scripts/apply-ruleset.sh
 
 # Let release-please open its release PR ("Allow GitHub Actions to create and

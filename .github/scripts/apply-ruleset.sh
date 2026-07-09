@@ -31,4 +31,10 @@ else
     --input "$ruleset_file"
 fi
 
+# Merge hygiene: head branches must die on merge. Without this, squash-merge
+# leaves the merged branch "ahead" of main, and automated ship loops re-PR it —
+# a descendant repo accumulated 22/59 (~37%) empty re-merge PRs this way.
+echo "Enabling delete_branch_on_merge on $repo ..."
+gh api --method PATCH "repos/$repo" -F delete_branch_on_merge=true >/dev/null
+
 echo "Done."
