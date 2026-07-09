@@ -20,6 +20,7 @@
  * wire, rather than the allowlist's "known-safe passthrough".
  */
 import type { ErrorHandler } from "hono"
+import { HTTPException } from "hono/http-exception"
 import type { ContentfulStatusCode } from "hono/utils/http-status"
 
 export interface TaggedError {
@@ -54,8 +55,28 @@ export const errorEnvelope = (error: TaggedError) => {
  * entirely (e.g. a service throwing instead of failing typed). Wired via
  * `app.onError` in api.ts. Same redact-and-log posture as an unregistered
  * tag above: log the real defect server-side, return the generic envelope.
+ *
+ * One carve-out: Hono's own `HTTPException` is NOT a defect — the framework
+ * throws it for routine client faults (e.g. `validator("json")` on a
+ * malformed body throws a 400). Redacting it to 500 would mislabel a client
+ * error as a server crash, so its status is respected: a custom `res` set by
+ * middleware is returned verbatim (headers like WWW-Authenticate matter);
+ * otherwise the exception's client-facing message is re-shaped into the
+ * shared `ApiErrorBody` envelope at its own status.
  */
 export const onUnexpectedError: ErrorHandler = (err, c) => {
+  if (err instanceof HTTPException) {
+    if (err.res) {
+      return err.getResponse()
+    }
+    return c.json(
+      {
+        ok: false as const,
+        error: { _tag: "HttpError", status: err.status, message: err.message },
+      },
+      err.status,
+    )
+  }
   console.error("unexpected defect reached the http boundary:", err)
   return c.json({ ok: false as const, error: INTERNAL_SERVER_ERROR }, 500)
 }
