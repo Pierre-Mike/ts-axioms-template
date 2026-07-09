@@ -42,7 +42,8 @@
           "level": "error",
           "options": {
             "deniedGlobals": {
-              "fetch": "web: use the typed Hono RPC client (hc<AppType>); server: do external I/O inside a *.io.ts service, where fetch is allowed."
+              "fetch": "web: use the typed Hono RPC client (hc<AppType>); server: do external I/O inside a *.io.ts service, where fetch is allowed.",
+              "process": "Read env through the typed config funnel (platform/config.ts) — the one schema-validated boundary (ts-axioms: typed config at boot). Sanctioned exceptions: platform/config.ts, main.ts, scripts/, infra/, vite/playwright configs."
             }
           }
         },
@@ -61,30 +62,18 @@
   },
   "overrides": [
     {
-      "includes": ["apps/server/src/main.ts"],
+      "includes": ["**/main.ts"],
       "linter": {
         "rules": {
           "suspicious": {
             "noConsole": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": [
-        "apps/server/src/**",
-        "!apps/server/src/platform/**",
-        "!apps/server/src/main.ts"
-      ],
-      "linter": {
-        "rules": {
+          },
           "style": {
             "noRestrictedGlobals": {
               "level": "error",
               "options": {
                 "deniedGlobals": {
-                  "fetch": "web: use the typed Hono RPC client (hc<AppType>); server: do external I/O inside a *.io.ts service, where fetch is allowed.",
-                  "process": "Read configuration through platform/config.ts — the one typed, schema-validated env funnel (ts-axioms: typed config at boot)."
+                  "fetch": "web: use the typed Hono RPC client (hc<AppType>); server: do external I/O inside a *.io.ts service, where fetch is allowed."
                 }
               }
             }
@@ -93,7 +82,13 @@
       }
     },
     {
-      "includes": ["apps/server/src/**/*.io.ts"],
+      "includes": [
+        "**/platform/config.ts",
+        "scripts/**",
+        "infra/**",
+        "**/vite.config.ts",
+        "**/playwright.config.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -101,7 +96,28 @@
               "level": "error",
               "options": {
                 "deniedGlobals": {
-                  "process": "Read configuration through platform/config.ts — the one typed, schema-validated env funnel (ts-axioms: typed config at boot)."
+                  "fetch": "web: use the typed Hono RPC client (hc<AppType>); server: do external I/O inside a *.io.ts service, where fetch is allowed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.ts", "**/*.tsx", "!**/*.test.ts", "!**/*.test.tsx", "!**/*.spec.ts"],
+      "plugins": ["./biome-plugins/no-cast-json.grit"]
+    },
+    {
+      "includes": ["**/*.io.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "process": "Read env through the typed config funnel (platform/config.ts) — the one schema-validated boundary (ts-axioms: typed config at boot)."
                 }
               }
             }
@@ -155,7 +171,7 @@
       }
     },
     {
-      "includes": ["apps/server/src/features/**", "!**/*.core.ts", "!**/*.core.tsx"],
+      "includes": ["**/features/**", "!**/*.core.ts", "!**/*.core.tsx"],
       "linter": {
         "rules": {
           "style": {
@@ -169,7 +185,13 @@
                 },
                 "patterns": [
                   {
-                    "group": ["../*/*.core", "../*/*.io", "../*/*.routes"],
+                    "group": [
+                      "../*/*.core",
+                      "../*/*.io",
+                      "../*/*.routes",
+                      "../*/*.queries",
+                      "../*/*.route"
+                    ],
                     "message": "A feature slice must not reach into a sibling slice's internals — depend on its published door (a service Tag + a shared Schema contract promoted to shared/). Modular monolith: modules talk through narrow doors, not back-channels."
                   }
                 ]

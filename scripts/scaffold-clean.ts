@@ -21,10 +21,15 @@ for (const rel of removable) {
 
 // Prune the project references from the root tsconfig solution file.
 const tsconfigPath = join(root, "tsconfig.json")
-const tsconfig = (await Bun.file(tsconfigPath).json()) as {
-  references?: { path: string }[]
-}
-if (Array.isArray(tsconfig.references)) {
+const tsconfig: unknown = await Bun.file(tsconfigPath).json()
+const hasReferences = (
+  value: unknown,
+): value is { references: { path: string }[] } & Record<string, unknown> =>
+  typeof value === "object" &&
+  value !== null &&
+  "references" in value &&
+  Array.isArray((value as { references: unknown }).references)
+if (hasReferences(tsconfig)) {
   tsconfig.references = tsconfig.references.filter(
     (r) => !removable.some((rel) => r.path.includes(rel.replace("apps/", ""))),
   )
