@@ -8,9 +8,34 @@
  * throw, mirroring health.core.ts's `InvalidVerboseFlag` pattern.
  */
 import type { Note } from "@ts-axioms/shared"
+import { decodeCreateNoteRequest, NOTE_TEXT_MAX_LENGTH } from "@ts-axioms/shared"
 import { Either } from "effect"
 
-export const NOTE_TEXT_MAX_LENGTH = 500
+// Re-exported so this module stays the one import path the slice's tests and
+// callers use for the constant, even though the value itself now lives in
+// shared/src/note.ts (the request contract below needs it too).
+export { NOTE_TEXT_MAX_LENGTH }
+
+export interface InvalidNoteBody {
+  readonly _tag: "InvalidNoteBody"
+}
+
+/**
+ * Decode an unknown request body against the shared `CreateNoteRequest`
+ * contract (well-formed JSON matching the shape, `text` a string within the
+ * wire-level max length). Wraps the schema's `ParseError` in a tagged `Left`
+ * — the raw `ParseError` never crosses the HTTP boundary (it isn't in
+ * `STATUS_BY_TAG` and could leak internal schema detail). This only checks
+ * shape; `validateText` below still owns the business rule (trim, reject
+ * empty-after-trim).
+ */
+export const parseCreateNoteRequest = (raw: unknown): Either.Either<string, InvalidNoteBody> => {
+  const decoded = decodeCreateNoteRequest(raw)
+  if (Either.isLeft(decoded)) {
+    return Either.left({ _tag: "InvalidNoteBody" })
+  }
+  return Either.right(decoded.right.text)
+}
 
 export interface InvalidNoteText {
   readonly _tag: "InvalidNoteText"

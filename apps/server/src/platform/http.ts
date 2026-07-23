@@ -19,6 +19,7 @@
  * error contract once a slice needs tag-specific payload validation on the
  * wire, rather than the allowlist's "known-safe passthrough".
  */
+import { Effect, type ManagedRuntime } from "effect"
 import type { ErrorHandler } from "hono"
 import type { ContentfulStatusCode } from "hono/utils/http-status"
 
@@ -28,9 +29,17 @@ export interface TaggedError {
 
 const INTERNAL_SERVER_ERROR = { _tag: "InternalServerError" } as const
 
-/** Allowlist: only tags registered here cross the wire with their real payload. */
+/**
+ * Allowlist: only tags registered here cross the wire with their real
+ * payload. Notably absent: `NotesDbError` (notes.io.ts) — its `cause` field
+ * is an intentionally open, unvalidated payload (whatever bun:sqlite/JS
+ * threw), so it's deliberately left unregistered and falls through to the
+ * generic redacted `InternalServerError` 500 below, same as any other
+ * unexpected server-side failure.
+ */
 const STATUS_BY_TAG: Record<string, ContentfulStatusCode> = {
   InvalidVerboseFlag: 400,
+  InvalidNoteBody: 400,
   InvalidNoteText: 400,
   InvalidNoteId: 400,
   NoteNotFound: 404,
@@ -47,6 +56,27 @@ export const errorEnvelope = (error: TaggedError) => {
     }
   }
   return { body: { ok: false as const, error }, status }
+}
+
+/**
+ * Runs an Effect program on a slice runtime and folds its typed-error channel
+ * into a plain outcome: either the success value or the shared `ApiErrorBody`
+ * envelope + status. Collapses the `runPromise` -> `Effect.either` edge every
+ * route repeats, WITHOUT calling `c.json` itself — each handler renders both
+ * branches with its own `c.json(...)`, so Hono's per-route RPC response typing
+ * (success AND error shape) stays fully inferred at the call site.
+ */
+export const runToOutcome = async <A, E extends TaggedError, R>(input: {
+  readonly runtime: Pick<ManagedRuntime.ManagedRuntime<R, never>, "runPromise">
+  readonly program: Effect.Effect<A, E, R>
+}): Promise<
+  | { readonly ok: true; readonly value: A }
+  | { readonly ok: false; readonly error: ReturnType<typeof errorEnvelope> }
+> => {
+  const result = await input.runtime.runPromise(Effect.either(input.program))
+  return result._tag === "Left"
+    ? { ok: false, error: errorEnvelope(result.left) }
+    : { ok: true, value: result.right }
 }
 
 /**

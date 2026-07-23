@@ -22,3 +22,21 @@ export type InfraConfig = typeof InfraConfigSchema.Type
 
 export const decodeInfraConfig = (raw: unknown): Either.Either<InfraConfig, string> =>
   Either.mapLeft(S.decodeUnknownEither(InfraConfigSchema)(raw), (error) => error.message)
+
+/**
+ * GCP adapter-local config. Decoded inside targets/gcp.ts (its own impure
+ * shell reads `gcp.config.region` and a `ts-axioms:allowPublicAccess` stack
+ * value) so the ad-hoc `?? "europe-west1"` default and the "public by
+ * default" invoker grant both go through the same typed-config-fails-fast
+ * discipline as the rest of the repo, instead of silent fallbacks.
+ */
+const GcpRuntimeConfigSchema = S.Struct({
+  region: S.optionalWith(S.String, { default: () => "europe-west1" }),
+  /** Grants `roles/run.invoker` to `allUsers`. Private by default. */
+  allowPublicAccess: S.optionalWith(S.Boolean, { default: () => false }),
+})
+
+export type GcpRuntimeConfig = typeof GcpRuntimeConfigSchema.Type
+
+export const decodeGcpRuntimeConfig = (raw: unknown): Either.Either<GcpRuntimeConfig, string> =>
+  Either.mapLeft(S.decodeUnknownEither(GcpRuntimeConfigSchema)(raw), (error) => error.message)

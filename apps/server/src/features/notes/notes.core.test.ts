@@ -4,10 +4,38 @@ import * as fc from "fast-check"
 import {
   checkCapacity,
   NOTE_TEXT_MAX_LENGTH,
+  parseCreateNoteRequest,
   parseNoteId,
   requireNote,
   validateText,
 } from "./notes.core"
+
+describe("parseCreateNoteRequest", () => {
+  it("extracts the text from a valid body", () => {
+    expect(parseCreateNoteRequest({ text: "hello" })).toEqual(Either.right("hello"))
+  })
+
+  it("rejects a missing text field", () => {
+    expect(parseCreateNoteRequest({})).toEqual(Either.left({ _tag: "InvalidNoteBody" }))
+  })
+
+  it("rejects a non-string text field", () => {
+    expect(Either.isLeft(parseCreateNoteRequest({ text: 42 }))).toBe(true)
+  })
+
+  it("rejects a non-object body", () => {
+    expect(Either.isLeft(parseCreateNoteRequest("not an object"))).toBe(true)
+  })
+
+  it("rejects text over the max length", () => {
+    const tooLong = "x".repeat(NOTE_TEXT_MAX_LENGTH + 1)
+    expect(Either.isLeft(parseCreateNoteRequest({ text: tooLong }))).toBe(true)
+  })
+
+  it("rejects an excess field on the body", () => {
+    expect(Either.isLeft(parseCreateNoteRequest({ text: "hi", extra: true }))).toBe(true)
+  })
+})
 
 describe("validateText", () => {
   it("trims and accepts non-empty text", () => {

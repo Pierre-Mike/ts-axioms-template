@@ -20,7 +20,7 @@
     "test:mutation": "bunx stryker run",
     "typecheck": "tsc -b",
     "audit": "bunx fallow dead-code && bunx fallow dupes && bunx fallow audit --gate all",
-    "verify": "bun run lint:ci && bun run typecheck && bun run test && bun run audit",
+    "verify": "bun run lint:ci && bun run openapi:check && bun run typecheck && bun run test && bun run audit",
     "openapi:gen": "bun run scripts/generate-openapi.ts",
     "openapi:check": "bun run scripts/generate-openapi.ts --check",
     "scaffold:slice": "bun run scripts/scaffold-slice.ts",

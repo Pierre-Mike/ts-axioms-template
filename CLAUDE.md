@@ -116,9 +116,15 @@ any `*.io` module are banned, the globals `Date` / `process` / `Promise` /
   Tests/lint verify deterministic code; **evals** verify the non-deterministic
   half — including the harness itself. A frozen, representative task set
   (`evals/tasks.jsonl`) is re-run to score whether a change to `.claude/`
-  (CLAUDE.md, skills, hooks, gates) actually made the agent better: score up →
-  keep and ratchet the floor; a sustained drop → revert (judge over several
-  runs against a noise floor, not a single number). `/retro`
+  (CLAUDE.md, skills, hooks, gates) actually made the agent better. Each task
+  is handed to a headless agent (pinned CLI + model — the two reproducibility
+  knobs) in a throwaway worktree, and passes ONLY when all three hold: the
+  agent produced a non-empty diff, `bun run verify` is green, and a per-task
+  deterministic assertion matches — so "did nothing" cannot score as "passed".
+  Scores persist and gate against a committed floor (`evals/baseline.json`):
+  raise the floor only after a real run reproduces a higher score, lower it
+  only with a documented reason. Runs on every PR touching `.claude/**` and
+  weekly. `/retro`
   (`.claude/skills/retro`) is the diagnosis step — it mines `.claude/traces/`,
   git history, and merged PRs into a few ranked, **enforcement-biased**
   proposals (prefer a hook/lint/test/script over a guideline; enforcements

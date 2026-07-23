@@ -10,4 +10,5 @@ test-results
 .DS_Store
 .stryker-tmp
 .evals-wt-*
+evals/results/
 .claude/worktrees/
