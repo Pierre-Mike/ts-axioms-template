@@ -1,10 +1,24 @@
 name: agent-evals
 
-# Weekly golden-task agent evals (see evals/README.md): headless `claude -p`
-# attempts each task in a throwaway worktree and the repo's own gates judge
-# the result. Measures whether the template still steers agents to the
-# canonical shape. No-ops when the ANTHROPIC_API_KEY secret is absent.
+# Golden-task agent evals (see evals/README.md): headless `claude -p` attempts
+# each task in a throwaway worktree; the repo's own gates PLUS a per-task
+# assertion judge the result (see evals/run.sh — `bun run verify` alone is
+# not the judge, since it's green on an untouched worktree). Measures whether
+# the template still steers agents to the canonical shape.
+#
+# Runs on every PR that touches the harness (so a CLAUDE.md/skill/hook change
+# is evaluated before merge, not just weekly after the fact) plus a weekly
+# schedule and manual dispatch. Not a required check (see the branch
+# ruleset) — it can be slow/flaky by nature (it invokes a live model) and a
+# fork PR cannot see the ANTHROPIC_API_KEY secret at all.
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".claude/**"
+      - "CLAUDE.md"
+      - "AGENTS.md"
+      - "evals/**"
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
@@ -21,14 +35,42 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+          # Each task runs `bun run verify` (-> fallow audit) inside a nested
+          # git worktree; fallow needs a local `main` ref to diff against,
+          # which a shallow checkout doesn't have (mirrors the `audit` job in
+          # ci.yml).
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
+      - run: git branch main origin/main 2>/dev/null || true
       - run: bun install --frozen-lockfile
-      - name: run golden tasks
+      - name: check for ANTHROPIC_API_KEY
+        id: key-check
         run: |
           if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "ANTHROPIC_API_KEY secret not configured — skipping agent evals."
-            exit 0
+            echo "present=false" >>"$GITHUB_OUTPUT"
+            {
+              echo "### Agent evals skipped"
+              echo "\`ANTHROPIC_API_KEY\` is not available to this run (expected"
+              echo "for pull requests from forks — GitHub does not pass repo"
+              echo "secrets to fork workflows). This is a skip, not a pass:"
+              echo "no eval tasks were attempted. If this is a same-repo run"
+              echo "and you expected the secret to be configured, check repo"
+              echo "settings."
+            } >>"$GITHUB_STEP_SUMMARY"
+          else
+            echo "present=true" >>"$GITHUB_OUTPUT"
           fi
-          ./evals/run.sh
+      - name: run golden tasks
+        if: steps.key-check.outputs.present == 'true'
+        run: ./evals/run.sh
+      - name: upload results
+        # Upload whatever run.sh produced even when it exits non-zero
+        # (a baseline regression), so the per-task breakdown is inspectable.
+        if: always() && steps.key-check.outputs.present == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: evals-results
+          path: evals/results/latest.json
+          if-no-files-found: warn

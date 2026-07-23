@@ -17,6 +17,9 @@ const Env = S.Struct({
   NODE_ENV: S.optionalWith(S.Literal("development", "test", "production"), {
     default: () => "development" as const,
   }),
+  // Default is a sane relative path for `bun run dev`. The container image
+  // (apps/server/Dockerfile) overrides this via `ENV NOTES_DB_PATH=...` to a
+  // writable, non-root-owned directory — the env var always wins here.
   NOTES_DB_PATH: S.optionalWith(S.String, { default: () => "notes.sqlite" }),
 })
 

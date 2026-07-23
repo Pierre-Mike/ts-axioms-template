@@ -64,12 +64,53 @@ const overridesOf = (biome: unknown): ReadonlyArray<Rec> => {
   return Array.isArray(list) ? list.filter(isRecord) : []
 }
 
-const deniedGlobalsOf = (node: unknown): ReadonlyArray<string> => {
-  const denied = dig({
-    value: node,
-    path: ["linter", "rules", "style", "noRestrictedGlobals", "options", "deniedGlobals"],
-  })
+/** A Biome rule value is either shorthand (`"error"`) or `{ level, options }`. */
+const ruleLevelOf = (rule: unknown): string | undefined => {
+  if (typeof rule === "string") return rule
+  return isRecord(rule) && typeof rule.level === "string" ? rule.level : undefined
+}
+
+const includesShape =
+  (shape: string) =>
+  (override: Rec): boolean =>
+    strings(override.includes).includes(shape)
+
+const includesSuffix =
+  (suffix: string) =>
+  (override: Rec): boolean =>
+    strings(override.includes).some((entry) => entry.endsWith(suffix))
+
+/**
+ * Biome applies overrides in array order; for a given rule path, the LAST
+ * override matching a shape wins wholesale over the top-level declaration and
+ * any earlier match (verified empirically against Biome 2.4 — rule options
+ * replace wholesale per matching override). A plain `.find()` only sees the
+ * FIRST match, which is blind to a later override that quietly weakens or
+ * empties the same rule for the same shape.
+ */
+const effectiveRuleNode = (input: {
+  readonly biome: unknown
+  readonly matches: (override: Rec) => boolean
+  readonly rulePath: ReadonlyArray<string>
+}): unknown => {
+  const path = ["linter", "rules", ...input.rulePath]
+  let effective = dig({ value: input.biome, path })
+  for (const override of overridesOf(input.biome).filter(input.matches)) {
+    const candidate = dig({ value: override, path })
+    if (candidate !== undefined) effective = candidate
+  }
+  return effective
+}
+
+const deniedGlobalNamesOf = (noRestrictedGlobalsRule: unknown): ReadonlyArray<string> => {
+  const denied = dig({ value: noRestrictedGlobalsRule, path: ["options", "deniedGlobals"] })
   return isRecord(denied) ? Object.keys(denied) : []
+}
+
+const patternGroupsOf = (noRestrictedImportsRule: unknown): ReadonlyArray<string> => {
+  const patterns = dig({ value: noRestrictedImportsRule, path: ["options", "patterns"] })
+  if (!Array.isArray(patterns)) return []
+  return patterns.flatMap((pattern) => (isRecord(pattern) ? strings(pattern.group) : []))
 }
 
 const importPatternGroupsOf = (node: unknown): ReadonlyArray<string> => {
@@ -100,13 +141,40 @@ const CORE_DENIED_GLOBALS: ReadonlyArray<string> = [
 
 const EFFECT_RUNTIME_NAMES: ReadonlyArray<string> = ["Effect", "Layer", "Context"]
 
+/** The sibling-slice ban entry that must survive in the *.core.ts override's patterns. */
+const CORE_SIBLING_PATTERN = "../*/*.core"
+
 const BIOME_AXIOM = "fail-closed lint scoping"
 
+const CORE_SHAPE = "**/*.core.ts"
+const IO_SHAPE_SUFFIX = "*.io.ts"
+const MAIN_SHAPE = "**/main.ts"
+
+/** Grit plugins that only enforce core purity if scoped to the *.core.ts override itself. */
+const CORE_SCOPED_PLUGINS: ReadonlyArray<string> = [
+  "no-throw-in-core.grit",
+  "no-await-in-core.grit",
+]
+
+const levelFinding = (input: {
+  readonly axiom: string
+  readonly shape: string
+  readonly rule: unknown
+}): Finding[] =>
+  ruleLevelOf(input.rule) === "error"
+    ? []
+    : [
+        {
+          axiom: input.axiom,
+          problem: `the effective ${input.shape} noRestrictedGlobals rule is not at level "error" (found ${JSON.stringify(ruleLevelOf(input.rule) ?? null)}) — a trailing override or a flip to "off"/"warn" silently disables enforcement`,
+          remedy: `keep noRestrictedGlobals at level "error" for every override matching ${input.shape} — check for a trailing override that weakens it`,
+        },
+      ]
+
 const checkBiomeCoreOverride = (biome: unknown): Finding[] => {
-  const core = overridesOf(biome).find((override) =>
-    strings(override.includes).includes("**/*.core.ts"),
-  )
-  if (core === undefined) {
+  const matches = includesShape(CORE_SHAPE)
+  const hasOverride = overridesOf(biome).some(matches)
+  if (!hasOverride) {
     return [
       {
         axiom: "impureim sandwich",
@@ -116,63 +184,95 @@ const checkBiomeCoreOverride = (biome: unknown): Finding[] => {
       },
     ]
   }
-  const denied = deniedGlobalsOf(core)
+  const globalsRule = effectiveRuleNode({
+    biome,
+    matches,
+    rulePath: ["style", "noRestrictedGlobals"],
+  })
+  const denied = deniedGlobalNamesOf(globalsRule)
   const missingGlobals = CORE_DENIED_GLOBALS.filter((name) => !denied.includes(name)).map(
     (name) => ({
       axiom: "impureim sandwich",
-      problem: `the **/*.core.ts override no longer denies the global \`${name}\``,
+      problem: `the effective **/*.core.ts override no longer denies the global \`${name}\``,
       remedy: `re-add \`${name}\` to deniedGlobals in the *.core.ts override — core must stay pure (data in, data out)`,
     }),
   )
+  const importsRule = effectiveRuleNode({
+    biome,
+    matches,
+    rulePath: ["style", "noRestrictedImports"],
+  })
   const importNames = strings(
-    dig({
-      value: core,
-      path: [
-        "linter",
-        "rules",
-        "style",
-        "noRestrictedImports",
-        "options",
-        "paths",
-        "effect",
-        "importNames",
-      ],
-    }),
+    dig({ value: importsRule, path: ["options", "paths", "effect", "importNames"] }),
   )
   const missingImportBans = EFFECT_RUNTIME_NAMES.filter((name) => !importNames.includes(name)).map(
     (name) => ({
       axiom: "impureim sandwich",
-      problem: `the **/*.core.ts override no longer bans importing \`${name}\` from effect`,
+      problem: `the effective **/*.core.ts override no longer bans importing \`${name}\` from effect`,
       remedy:
         "restore the effect-runtime import ban (Effect/Layer/Context/ManagedRuntime/Runtime) in the *.core.ts override",
     }),
   )
-  return [...missingGlobals, ...missingImportBans]
+  const siblingBan: Finding[] = patternGroupsOf(importsRule).includes(CORE_SIBLING_PATTERN)
+    ? []
+    : [
+        {
+          axiom: "modules talk through doors",
+          problem:
+            "the effective **/*.core.ts override no longer bans importing a sibling slice's internals (../*/*.core pattern in noRestrictedImports.patterns)",
+          remedy:
+            "restore the sibling-slice ban pattern group in the *.core.ts override's noRestrictedImports.patterns",
+        },
+      ]
+  return [
+    ...missingGlobals,
+    ...levelFinding({ axiom: "impureim sandwich", shape: CORE_SHAPE, rule: globalsRule }),
+    ...missingImportBans,
+    ...siblingBan,
+  ]
 }
 
 const checkBiomePlugins = (biome: unknown): Finding[] => {
-  const registered = [
+  const registeredAnywhere = [
     ...strings(dig({ value: biome, path: ["plugins"] })),
     ...overridesOf(biome).flatMap((override) => strings(override.plugins)),
   ]
-  return REQUIRED_PLUGINS.filter(
-    (plugin) => !registered.some((entry) => entry.endsWith(plugin)),
+  const anywhereFindings = REQUIRED_PLUGINS.filter(
+    (plugin) => !CORE_SCOPED_PLUGINS.includes(plugin),
+  )
+    .filter((plugin) => !registeredAnywhere.some((entry) => entry.endsWith(plugin)))
+    .map((plugin) => ({
+      axiom: BIOME_AXIOM,
+      problem: `grit plugin ${plugin} is not registered in biome.json`,
+      remedy: `re-register ./biome-plugins/${plugin} (top-level or in the override that owns it) — deleting a plugin deletes the axiom it enforces`,
+    }))
+  const registeredOnCore = overridesOf(biome)
+    .filter(includesShape(CORE_SHAPE))
+    .flatMap((override) => strings(override.plugins))
+  const coreScopedFindings = CORE_SCOPED_PLUGINS.filter(
+    (plugin) => !registeredOnCore.some((entry) => entry.endsWith(plugin)),
   ).map((plugin) => ({
     axiom: BIOME_AXIOM,
-    problem: `grit plugin ${plugin} is not registered in biome.json`,
-    remedy: `re-register ./biome-plugins/${plugin} (top-level or in the override that owns it) — deleting a plugin deletes the axiom it enforces`,
+    problem: `grit plugin ${plugin} is not registered on the override scoped to **/*.core.ts — registering it elsewhere doesn't enforce core purity`,
+    remedy: `register ./biome-plugins/${plugin} on the **/*.core.ts override specifically`,
   }))
+  return [...anywhereFindings, ...coreScopedFindings]
 }
 
 const checkBiomeGlobalDenials = (biome: unknown): Finding[] => {
-  const topDenied = deniedGlobalsOf(biome)
-  return ["fetch", "process"]
+  const rule = dig({ value: biome, path: ["linter", "rules", "style", "noRestrictedGlobals"] })
+  const topDenied = deniedGlobalNamesOf(rule)
+  const missing = ["fetch", "process"]
     .filter((name) => !topDenied.includes(name))
     .map((name) => ({
       axiom: BIOME_AXIOM,
       problem: `the global \`${name}\` is no longer denied at the top level of biome.json`,
       remedy: `deny \`${name}\` globally and re-allow only at sanctioned shapes — path-scoped denials fail OPEN when an app is renamed`,
     }))
+  return [
+    ...missing,
+    ...levelFinding({ axiom: BIOME_AXIOM, shape: "the top-level biome.json", rule }),
+  ]
 }
 
 const checkBiomeDoorBan = (biome: unknown): Finding[] => {
@@ -194,24 +294,81 @@ const checkBiomeDoorBan = (biome: unknown): Finding[] => {
 }
 
 const checkBiomeIoPort = (biome: unknown): Finding[] => {
-  const ioOverride = overridesOf(biome).find((override) =>
-    strings(override.includes).some((entry) => entry.endsWith("*.io.ts")),
-  )
-  if (ioOverride !== undefined && !deniedGlobalsOf(ioOverride).includes("fetch")) return []
+  const matches = includesSuffix(IO_SHAPE_SUFFIX)
+  const hasOverride = overridesOf(biome).some(matches)
+  if (!hasOverride) {
+    return [
+      {
+        axiom: BIOME_AXIOM,
+        problem: "the *.io.ts override that re-allows fetch (the sanctioned I/O port) is missing",
+        remedy:
+          "restore the **/*.io.ts override re-declaring deniedGlobals without fetch — otherwise slices have no sanctioned place for external I/O",
+      },
+    ]
+  }
+  const rule = effectiveRuleNode({ biome, matches, rulePath: ["style", "noRestrictedGlobals"] })
+  const denied = deniedGlobalNamesOf(rule)
+  const fetchFinding: Finding[] = denied.includes("fetch")
+    ? [
+        {
+          axiom: BIOME_AXIOM,
+          problem:
+            "the effective **/*.io.ts noRestrictedGlobals rule still denies `fetch` — the sanctioned I/O port has no way to make external calls",
+          remedy: "the *.io.ts override must re-declare deniedGlobals without `fetch`",
+        },
+      ]
+    : []
+  const processFinding: Finding[] = denied.includes("process")
+    ? []
+    : [
+        {
+          axiom: BIOME_AXIOM,
+          problem:
+            "the effective **/*.io.ts noRestrictedGlobals rule no longer denies `process` — typed config at boot is unenforced for I/O services",
+          remedy: "restore `process` in the *.io.ts override's deniedGlobals",
+        },
+      ]
   return [
-    {
-      axiom: BIOME_AXIOM,
-      problem: "the *.io.ts override that re-allows fetch (the sanctioned I/O port) is missing",
-      remedy:
-        "restore the **/*.io.ts override re-declaring deniedGlobals without fetch — otherwise slices have no sanctioned place for external I/O",
-    },
+    ...fetchFinding,
+    ...processFinding,
+    ...levelFinding({ axiom: BIOME_AXIOM, shape: "**/*.io.ts", rule }),
   ]
+}
+
+const checkBiomeMainOverride = (biome: unknown): Finding[] => {
+  const matches = includesShape(MAIN_SHAPE)
+  const hasOverride = overridesOf(biome).some(matches)
+  if (!hasOverride) {
+    return [
+      {
+        axiom: BIOME_AXIOM,
+        problem:
+          "biome.json has no override scoped to **/main.ts — the composition root's globals are unscoped",
+        remedy:
+          'restore the **/main.ts override denying `fetch` at level "error" (console is the sanctioned exception there)',
+      },
+    ]
+  }
+  const rule = effectiveRuleNode({ biome, matches, rulePath: ["style", "noRestrictedGlobals"] })
+  const denied = deniedGlobalNamesOf(rule)
+  const fetchFinding: Finding[] = denied.includes("fetch")
+    ? []
+    : [
+        {
+          axiom: BIOME_AXIOM,
+          problem: "the effective **/main.ts noRestrictedGlobals rule no longer denies `fetch`",
+          remedy:
+            "restore `fetch` in the **/main.ts override's deniedGlobals — main.ts must still use the sanctioned *.io.ts port for external calls",
+        },
+      ]
+  return [...fetchFinding, ...levelFinding({ axiom: BIOME_AXIOM, shape: MAIN_SHAPE, rule })]
 }
 
 export const checkBiome = (biome: unknown): Finding[] => [
   ...checkBiomeGlobalDenials(biome),
   ...checkBiomeDoorBan(biome),
   ...checkBiomeIoPort(biome),
+  ...checkBiomeMainOverride(biome),
   ...checkBiomeCoreOverride(biome),
   ...checkBiomePlugins(biome),
 ]

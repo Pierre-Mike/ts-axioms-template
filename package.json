@@ -20,7 +20,7 @@
     "test:mutation": "bunx stryker run",
     "typecheck": "tsc -b",
     "audit": "bunx fallow dead-code && bunx fallow dupes && bunx fallow audit --gate all",
-    "verify": "bun run lint:ci && bun run typecheck && bun run test && bun run audit",
+    "verify": "bun run lint:ci && bun run openapi:check && bun run typecheck && bun run test && bun run audit",
     "openapi:gen": "bun run scripts/generate-openapi.ts",
     "openapi:check": "bun run scripts/generate-openapi.ts --check",
     "scaffold:slice": "bun run scripts/scaffold-slice.ts",
@@ -42,6 +42,11 @@
     "js-yaml": "^4.2.0",
     "undici": "^6.27.0",
     "@opentelemetry/core": "^2.8.0",
-    "esbuild": "^0.28.1"
+    "@opentelemetry/propagator-jaeger": "^2.9.0",
+    "esbuild": "^0.28.1",
+    "tar": "^7.5.18",
+    "brace-expansion": "^2.1.2",
+    "protobufjs": "^7.6.5",
+    "fast-uri": "^3.1.4"
   }
 }

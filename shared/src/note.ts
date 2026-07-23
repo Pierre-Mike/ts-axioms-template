@@ -30,3 +30,30 @@ export const decodeNote = S.decodeUnknownSync(Note, { onExcessProperty: "error" 
 
 /** Runtime decode for the list endpoint — same excess-field discipline as `decodeNote`. */
 export const decodeNoteList = S.decodeUnknownSync(NoteList, { onExcessProperty: "error" })
+
+/**
+ * The max length a note's trimmed text may run to. Lives here (not in the
+ * server's notes.core.ts) so the request contract below can reuse it without
+ * shared importing back from the server; notes.core.ts re-exports this same
+ * binding so its own callers/tests see one source of truth, not two copies.
+ */
+export const NOTE_TEXT_MAX_LENGTH = 500
+
+/** The POST body contract for creating a note. */
+export const CreateNoteRequest = S.Struct({
+  text: S.String.pipe(S.maxLength(NOTE_TEXT_MAX_LENGTH)),
+})
+
+export type CreateNoteRequest = S.Schema.Type<typeof CreateNoteRequest>
+
+/**
+ * Runtime decode for the server's request-body boundary. Unlike `decodeNote`
+ * / `decodeNoteList` (which assert trusted response shapes and throw on
+ * drift), this one is consumed from inside the pure functional core
+ * (notes.core.ts's `parseCreateNoteRequest`), which must never throw —
+ * so it returns an `Either` instead of throwing a `ParseError`. Same
+ * excess-field discipline as the other shared decoders.
+ */
+export const decodeCreateNoteRequest = S.decodeUnknownEither(CreateNoteRequest, {
+  onExcessProperty: "error",
+})

@@ -2,8 +2,9 @@
  * Hono shell for the `notes` slice.
  *
  * POST / is the multi-step sandwich this slice exists to demonstrate: impure
- * read (parse the body, read the current note count) -> pure decide
- * (validate the text, guard capacity) -> impure write (persist), then
+ * read (parse + decode the body) -> pure decide (validate the text) -> impure
+ * read+decide+write, atomically (guard capacity against the current count and
+ * persist in one step — see notes.io.ts's `insertIfUnderCapacity`), then
  * respond. GET /:id runs the shorter impure read -> pure decide (404 guard)
  * -> respond shape. Every Left is lifted into Effect by `yield*`-ing it
  * directly, exactly like health.routes.ts, so a typed failure becomes the
@@ -11,9 +12,14 @@
  */
 import { Clock, Effect, type ManagedRuntime } from "effect"
 import { Hono } from "hono"
-import { validator } from "hono/validator"
-import { errorEnvelope } from "../../platform/http"
-import { checkCapacity, parseNoteId, requireNote, validateText } from "./notes.core"
+import { runToOutcome } from "../../platform/http"
+import {
+  type InvalidNoteBody,
+  parseCreateNoteRequest,
+  parseNoteId,
+  requireNote,
+  validateText,
+} from "./notes.core"
 import { NotesIo } from "./notes.io"
 
 /** Hardcoded here deliberately — the shell owns policy, not platform/config.ts. */
@@ -23,43 +29,42 @@ export type NotesRouteRuntime = Pick<ManagedRuntime.ManagedRuntime<NotesIo, neve
 
 export const buildNotesApp = (runtime: NotesRouteRuntime) =>
   new Hono()
-    .post(
-      "/",
-      validator("json", (value) => {
-        const record = value as { readonly text?: unknown }
-        return { text: typeof record.text === "string" ? record.text : "" }
-      }),
-      async (c) => {
-        const { text: rawText } = c.req.valid("json")
-        const program = Effect.gen(function* () {
-          // --- pure decide: validate the text ---
-          const text = yield* validateText(rawText)
-          // --- impure read (shell): current note count ---
-          const io = yield* NotesIo
-          const count = yield* io.count()
-          // --- pure decide: capacity guard ---
-          yield* checkCapacity({ count, limit: NOTE_LIMIT })
-          // --- impure read (shell): wall-clock for the new note's timestamp ---
-          const createdAt = yield* Clock.currentTimeMillis
-          // --- impure write (shell): persist ---
-          return yield* io.insert({ text, createdAt })
+    .post("/", async (c) => {
+      const program = Effect.gen(function* () {
+        // --- impure read (shell): parse the raw JSON body. Malformed JSON
+        // (or no body at all) becomes a typed InvalidNoteBody failure here,
+        // never a thrown SyntaxError — so it stays inside the shared
+        // ApiErrorBody envelope instead of escaping as Hono's plaintext 400. ---
+        const rawBody = yield* Effect.tryPromise({
+          try: () => c.req.json<unknown>(),
+          catch: (): InvalidNoteBody => ({ _tag: "InvalidNoteBody" }),
         })
+        // --- pure decide: decode the body against the shared request contract ---
+        const rawText = yield* parseCreateNoteRequest(rawBody)
+        // --- pure decide: validate the text ---
+        const text = yield* validateText(rawText)
+        // --- impure read (shell): wall-clock for the new note's timestamp ---
+        const createdAt = yield* Clock.currentTimeMillis
+        // --- impure read+decide+write (shell), atomically: guard capacity
+        // against the current count and persist in one step, so two
+        // concurrent requests can't both pass the guard and overshoot the
+        // limit (see notes.io.ts's `insertIfUnderCapacity`) ---
+        const io = yield* NotesIo
+        return yield* io.insertIfUnderCapacity({ text, createdAt, limit: NOTE_LIMIT })
+      })
 
-        const result = await runtime.runPromise(Effect.either(program))
-        if (result._tag === "Left") {
-          const { body, status } = errorEnvelope(result.left)
-          return c.json(body, status)
-        }
-        return c.json(result.right, 201)
-      },
-    )
+      const outcome = await runToOutcome({ runtime, program })
+      if (!outcome.ok) return c.json(outcome.error.body, outcome.error.status)
+      return c.json(outcome.value, 201)
+    })
     .get("/", async (c) => {
       const program = Effect.gen(function* () {
         const io = yield* NotesIo
         return yield* io.list()
       })
-      const notes = await runtime.runPromise(program)
-      return c.json(notes)
+      const outcome = await runToOutcome({ runtime, program })
+      if (!outcome.ok) return c.json(outcome.error.body, outcome.error.status)
+      return c.json(outcome.value)
     })
     .get("/:id", async (c) => {
       const program = Effect.gen(function* () {
@@ -72,10 +77,7 @@ export const buildNotesApp = (runtime: NotesRouteRuntime) =>
         return yield* requireNote({ id, found })
       })
 
-      const result = await runtime.runPromise(Effect.either(program))
-      if (result._tag === "Left") {
-        const { body, status } = errorEnvelope(result.left)
-        return c.json(body, status)
-      }
-      return c.json(result.right)
+      const outcome = await runToOutcome({ runtime, program })
+      if (!outcome.ok) return c.json(outcome.error.body, outcome.error.status)
+      return c.json(outcome.value)
     })

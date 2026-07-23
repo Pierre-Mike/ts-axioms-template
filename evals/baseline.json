@@ -1,0 +1,5 @@
+{
+  "minPass": 0,
+  "totalTasks": 4,
+  "note": "minPass is the ratchet floor evals/run.sh enforces: a run scoring below it fails CI. Starts at 0 because no honest run (real judge + real asserts) has ever executed against this task set — see evals/README.md. The first CI run that reports a genuine `pass` count in evals/results/latest.json should raise minPass to that number in the same PR. Raise it only when a run has actually reproduced the higher score; lower it only with a commit message explaining why (e.g. a task was retired or made stricter)."
+}

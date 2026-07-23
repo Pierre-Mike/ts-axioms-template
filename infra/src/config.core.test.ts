@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { Either } from "effect"
 import fc from "fast-check"
-import { decodeInfraConfig, TARGET_NAMES } from "./config.core"
+import { decodeGcpRuntimeConfig, decodeInfraConfig, TARGET_NAMES } from "./config.core"
 
 describe("decodeInfraConfig", () => {
   it("decodes a minimal config and applies defaults", () => {
@@ -47,5 +47,35 @@ describe("decodeInfraConfig", () => {
         Either.isRight(decodeInfraConfig({ target: "gcp", serviceName })),
       ),
     )
+  })
+})
+
+describe("decodeGcpRuntimeConfig", () => {
+  it("defaults to europe-west1 and private access when nothing is set", () => {
+    const result = decodeGcpRuntimeConfig({})
+    expect(Either.isRight(result)).toBe(true)
+    if (Either.isRight(result)) {
+      expect(result.right).toEqual({ region: "europe-west1", allowPublicAccess: false })
+    }
+  })
+
+  it("honors an explicit region and opt-in public access", () => {
+    const result = decodeGcpRuntimeConfig({ region: "us-central1", allowPublicAccess: true })
+    expect(Either.isRight(result)).toBe(true)
+    if (Either.isRight(result)) {
+      expect(result.right).toEqual({ region: "us-central1", allowPublicAccess: true })
+    }
+  })
+
+  it("rejects a non-boolean allowPublicAccess as a Left, not a throw", () => {
+    expect(Either.isLeft(decodeGcpRuntimeConfig({ allowPublicAccess: "true" }))).toBe(true)
+  })
+
+  it("treats undefined fields the same as missing (pulumi Config returns undefined, not absence)", () => {
+    const result = decodeGcpRuntimeConfig({ region: undefined, allowPublicAccess: undefined })
+    expect(Either.isRight(result)).toBe(true)
+    if (Either.isRight(result)) {
+      expect(result.right).toEqual({ region: "europe-west1", allowPublicAccess: false })
+    }
   })
 })
