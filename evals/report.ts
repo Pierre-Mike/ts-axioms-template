@@ -216,14 +216,23 @@ const compare = async (input: {
   ].join("\n")
 }
 
+/** `--score` prints the bare mean score — the number a hill-climbing loop reads. */
+const scoreOnly = async (path: string): Promise<string> => {
+  const run = await readRun(path)
+  return mean(run.cells.map((cell) => scoreOf(cell.checks))).toFixed(4)
+}
+
 const compareAt = argv.indexOf("--compare")
-const text =
-  compareAt === -1
-    ? await single(argv[0] ?? "")
-    : await compare({
-        basePath: argv[compareAt + 1] ?? "",
-        candidatePath: argv[compareAt + 2] ?? "",
-      })
+const comparison = async (): Promise<string> =>
+  compare({
+    basePath: argv[compareAt + 1] ?? "",
+    candidatePath: argv[compareAt + 2] ?? "",
+  })
+
+const oneRun = async (): Promise<string> =>
+  argv.includes("--score") ? scoreOnly(argv[0] ?? "") : single(argv[0] ?? "")
+
+const text = compareAt === -1 ? await oneRun() : await comparison()
 
 const outAt = argv.indexOf("--out")
 if (outAt === -1) await Bun.write(Bun.stdout, `${text}\n`)

@@ -47,7 +47,7 @@ bun run audit      # fallow full-repo scan (CI adds `bun audit` for vulnerabilit
 These four are the CI jobs (`lint` / `typecheck` / `test` / `audit`) and the
 branch ruleset's required checks — the names are a contract. CI also runs
 non-required `e2e` (Playwright) and `zizmor` (workflow lint) jobs per PR, plus
-weekly mutation tests (Stryker on `*.core.ts`) and golden-task agent evals
+weekly mutation tests (Stryker on `*.core.ts`) and the agent eval grid
 (`evals/`).
 
 ## Reference slice: `health`
@@ -81,8 +81,12 @@ bun run scaffold:slice <feature>   # core + test + io + routes, mounted + wired
 - `bun run scaffold:clean` — strip `apps/web` + `apps/e2e` for a backend-only
   service.
 - `bun run test:mutation` — Stryker mutation run over the pure cores.
-- `./evals/run.sh` — headless agent golden tasks judged by the gates
-  (needs `ANTHROPIC_API_KEY`).
+- `bun run evals` — agent evals over a `task × model × repeat` grid: twelve
+  application archetypes, judged by the repo's gates **and** functional
+  asserts that drive real HTTP. Answers "does the template still steer agents
+  to working code?" and "how cheap a model can it carry?" (cost-per-point per
+  model, 2σ A/B verdicts). `bun run evals:baseline` scores the grid with no
+  agent and costs nothing. See [evals/README.md](./evals/README.md).
 
 ## Docs
 
