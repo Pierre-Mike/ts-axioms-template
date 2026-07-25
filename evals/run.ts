@@ -88,6 +88,25 @@ interface Ran {
   readonly timedOut: boolean
 }
 
+const GRACE_MS = 15_000
+
+/**
+ * Killing a process does NOT close pipes its grandchildren inherited — an
+ * agent's test that leaves a server running keeps stdout open forever, and a
+ * plain `await new Response(proc.stdout).text()` would hang the whole grid on
+ * one cell. Every read is therefore raced against a grace period past the
+ * kill: the exit code and the timeout flag are what scoring needs, output is
+ * best-effort.
+ */
+const readOrGiveUp = async (input: {
+  readonly stream: ReadableStream<Uint8Array> | null
+  readonly budgetMs: number
+}): Promise<string> => {
+  if (input.stream === null) return ""
+  const text = new Response(input.stream).text()
+  return Promise.race([text, Bun.sleep(input.budgetMs).then(() => "")]).catch(() => "")
+}
+
 const shell = async (input: {
   readonly cmd: ReadonlyArray<string>
   readonly cwd: string
@@ -107,10 +126,11 @@ const shell = async (input: {
     timedOut = true
     proc.kill(9)
   }, input.timeoutMs)
+  const budgetMs = input.timeoutMs + GRACE_MS
   const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
+    readOrGiveUp({ stream: proc.stdout, budgetMs }),
+    readOrGiveUp({ stream: proc.stderr, budgetMs }),
+    Promise.race([proc.exited, Bun.sleep(budgetMs).then(() => 124)]),
   ])
   clearTimeout(killer)
   return { code, stdout, stderr, ms: (Bun.nanoseconds() - startedNs) / 1e6, timedOut }
@@ -198,6 +218,17 @@ const reportedError = (parsed: unknown): boolean =>
   parsed !== null &&
   (parsed as Record<string, unknown>).is_error === true
 
+/**
+ * `error_max_turns` is not the same failure as a bad answer — the agent was
+ * cut off mid-repair, so its score understates the model. Keep the distinction
+ * in the results instead of flattening both to "error".
+ */
+const errorSubtype = (parsed: unknown): string => {
+  if (typeof parsed !== "object" || parsed === null) return "agent reported is_error"
+  const subtype = (parsed as Record<string, unknown>).subtype
+  return typeof subtype === "string" ? `agent stopped: ${subtype}` : "agent reported is_error"
+}
+
 /** Distinguish "the agent failed" from "the agent finished but did poor work". */
 const agentErrorOf = (input: {
   readonly ran: Ran
@@ -208,7 +239,7 @@ const agentErrorOf = (input: {
   if (input.ran.code !== 0) {
     return `claude exited ${input.ran.code}: ${input.ran.stderr.slice(0, 400)}`
   }
-  return reportedError(input.parsed) ? "agent reported is_error" : null
+  return reportedError(input.parsed) ? errorSubtype(input.parsed) : null
 }
 
 const runAgent = async (input: {
