@@ -85,6 +85,7 @@
       "includes": [
         "**/platform/config.ts",
         "scripts/**",
+        "evals/**",
         "infra/**",
         ".claude/hooks/**",
         "**/vite.config.ts",

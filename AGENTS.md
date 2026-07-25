@@ -113,16 +113,30 @@ any `*.io` module are banned, the globals `Date` / `process` / `Promise` /
   provider.
 - **Evals + retrospective close the loop (the harness improves over time).**
   Tests/lint verify deterministic code; **evals** verify the non-deterministic
-  half — including the harness itself. A frozen, representative task set
-  (`evals/tasks.jsonl`) is re-run to score whether a change to `.claude/`
-  (CLAUDE.md, skills, hooks, gates) actually made the agent better: score up →
-  keep and ratchet the floor; a sustained drop → revert (judge over several
-  runs against a noise floor, not a single number). `/retro`
+  half — including the harness itself. `evals/` is a frozen grid of
+  `task × model × repeat`: each cell hands a task to a headless agent in a
+  throwaway worktree, then judges it twice — the repo's gates (`lint:ci` /
+  `typecheck` / `test` / `audit`) prove nothing broke, and per-task
+  **asserts** (mostly real HTTP through `evals/probe.ts`) prove the feature
+  actually runs. Asserts outweigh gates 2:1 because `bun run verify` is green
+  on an untouched checkout — a gates-only task scores a do-nothing agent 100%.
+  `bun run evals:baseline` (no agent, no tokens) makes that visible and
+  `bun run doctor` rejects any task with no asserts. The task set spans
+  application *archetypes*, not just CRUD — pure algorithm, persistence + state
+  machine, external HTTP, shared contract, cross-cutting middleware, web
+  loader/query, cross-module door, background (non-request) work, streaming,
+  infra adapter, rename survival — so a structure that only fits one shape
+  shows up as a column of zeros. Two questions get answered: *did my harness
+  change help?* — `evals/report.ts --compare` judges the delta against a 2σ
+  noise floor built from the repeats, never a single run (score up → keep and
+  ratchet the floor; sustained drop → revert); and *how cheap a model can this
+  carry?* — the model table ranks by score AND cost-per-point, so strong
+  determinism buys a smaller tier exactly where the grid says it does. `/retro`
   (`.claude/skills/retro`) is the diagnosis step — it mines `.claude/traces/`,
   git history, and merged PRs into a few ranked, **enforcement-biased**
   proposals (prefer a hook/lint/test/script over a guideline; enforcements
-  compound, guidelines decay). Loop: `/retro` proposes → apply → re-run
-  `evals/tasks.jsonl` → keep what raises the score.
+  compound, guidelines decay). Loop: `/retro` proposes → apply → re-run the
+  grid → keep what raises the score.
 
 - **The harness checks itself.** Enforcement attaches to file *shape*, not
   location (`**/*.core.ts`, `**/*.io.ts`, `**/features/**`,
@@ -168,6 +182,9 @@ bun run test:e2e       # playwright (apps/e2e; run `bunx playwright install` onc
 bun run test:mutation  # stryker mutation run over *.core.ts (also weekly in CI)
 bun run audit          # fallow full-repo scan (dead code / dup / cycles / complexity)
 bun run doctor         # harness self-check: the enforcement stack itself is intact (also in test)
+bun run evals          # agent evals: task × model grid (evals/README.md)
+bun run evals:baseline # score the grid with NO agent — proves tasks measure work
+bun run evals:report   # markdown report; --compare A B for a 2σ A/B verdict
 bun run openapi:gen    # regenerate openapi.json from the shared schemas
 bun run scaffold:slice # generate a new feature slice
 bun run scaffold:clean # remove apps/web + apps/e2e -> backend-only repo

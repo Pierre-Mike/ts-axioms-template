@@ -11,7 +11,8 @@
     "global-teardown.ts",
     "playwright.config.ts",
     "vite.config.ts",
-    "scripts/*.ts"
+    "scripts/*.ts",
+    "evals/*.ts"
   ],
   "workspaces": {
     "packages": ["apps/*", "infra", "shared"]

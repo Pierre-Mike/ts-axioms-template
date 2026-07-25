@@ -36,6 +36,22 @@ const yamlOrNull = (path: string): unknown => {
   }
 }
 
+/** One JSON object per line; a malformed line is dropped, not fatal. */
+const jsonlOrEmpty = (path: string): unknown[] => {
+  const text = textOrNull(path)
+  if (text === null) return []
+  return text
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .flatMap((line) => {
+      try {
+        return [JSON.parse(line)]
+      } catch {
+        return []
+      }
+    })
+}
+
 const isWorkspaceDir = (dir: string): boolean => existsSync(join(dir, "package.json"))
 
 const expandPattern = (input: { readonly root: string; readonly pattern: string }): string[] => {
@@ -90,6 +106,8 @@ export const readDoctorInput = (root: string): DoctorInput => {
     claudeMd: textOrNull(join(root, "CLAUDE.md")),
     agentsMd: textOrNull(join(root, "AGENTS.md")),
     docsSyncTestExists: existsSync(join(root, "scripts", "docs-sync.test.ts")),
+    evalTasks: jsonlOrEmpty(join(root, "evals", "tasks.jsonl")),
+    evalTasksFileExists: existsSync(join(root, "evals", "tasks.jsonl")),
   }
 }
 
