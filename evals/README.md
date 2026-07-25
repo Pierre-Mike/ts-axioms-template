@@ -65,6 +65,26 @@ by **cost per point**, so a model that is 10× cheaper but fails half the grid
 stops looking cheap. Strong determinism should let a smaller model succeed;
 the grid tells you exactly which archetypes it stops being able to carry.
 
+## Reference run (the floor to ratchet)
+
+Full grid, one repeat per cell, 2026-07-25, 36 cells, $46.60:
+
+| model | fully green | mean score | $/task | $/point | min/task |
+| --- | --- | --- | --- | --- | --- |
+| opus | 75% | 0.966 | $2.36 | $2.45 | 6.1 |
+| haiku | 67% | 0.945 | $0.30 | $0.31 | 2.3 |
+| sonnet | 75% | 0.937 | $1.22 | $1.31 | 4.0 |
+
+Every archetype reached green on at least one model, and eight of twelve on
+all three — streaming, background work, the cross-module door, the infra
+adapter and a whole-app rename included. The cheap tier's one substantive
+miss was `background-job` (the endpoint's counter never advanced, though the
+code looked right — exactly the failure a grep-based assert would have
+scored green).
+
+Beat these numbers before claiming a harness change helped, and re-run with
+`--repeats 3` before trusting a delta.
+
 ## Adding a task
 
 One JSON object per line in `tasks.jsonl`:

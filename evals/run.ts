@@ -520,7 +520,9 @@ const options: Options = {
   ref: flag({ name: "ref", fallback: "HEAD" }),
   dirty: hasFlag("dirty"),
   baseline,
-  maxTurns: numberFlag({ name: "max-turns", fallback: 60 }),
+  // 60 cut three cells off mid-repair in the first full grid (all three were
+  // cross-cutting tasks: auth middleware, an app rename, an upstream client).
+  maxTurns: numberFlag({ name: "max-turns", fallback: 100 }),
   permissionMode: flag({ name: "permission-mode", fallback: "bypassPermissions" }),
   timeoutMs: numberFlag({ name: "timeout-ms", fallback: 1_800_000 }),
   gateTimeoutMs: numberFlag({ name: "gate-timeout-ms", fallback: 900_000 }),
