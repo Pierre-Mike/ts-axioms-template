@@ -10,7 +10,7 @@
  */
 import { Effect, type ManagedRuntime } from "effect"
 import { Hono } from "hono"
-import { errorEnvelope } from "../../platform/http"
+import { runToOutcome } from "../../platform/http"
 import { buildStatus, parseVerbose } from "./health.core"
 import { HealthClock } from "./health.io"
 
@@ -33,12 +33,11 @@ export const buildHealthApp = (runtime: HealthRouteRuntime) =>
       return { status, verbose }
     })
 
-    const result = await runtime.runPromise(Effect.either(program))
-    if (result._tag === "Left") {
-      // Shared ApiErrorBody envelope; tag -> status mapping lives in platform/http.ts.
-      const { body, status } = errorEnvelope(result.left)
-      return c.json(body, status)
-    }
-    const { status, verbose } = result.right
+    // Shared ApiErrorBody envelope on the Left; tag -> status mapping lives in
+    // platform/http.ts. Both branches render with c.json here so Hono keeps the
+    // route's RPC response type inferred.
+    const outcome = await runToOutcome({ runtime, program })
+    if (!outcome.ok) return c.json(outcome.error.body, outcome.error.status)
+    const { status, verbose } = outcome.value
     return c.json(verbose ? { ...status, verbose: true } : status)
   })

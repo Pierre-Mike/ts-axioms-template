@@ -51,6 +51,18 @@ any `*.io` module are banned, the globals `Date` / `process` / `Promise` /
 `console` / `setTimeout` / `setInterval` are banned, and GritQL plugins
 (`biome-plugins/`) ban `throw` and `await`.
 
+**A slice is a closed set of shapes.** Because those rules attach to the
+`*.core.ts` shape, purity used to be opt-in by FILENAME: a `utils.ts` inside a
+slice matched no shape, so it inherited no purity rules and — the co-located
+test gate only looking at `*.core.ts` — no required test either. Logic could
+hide there with every axiom unenforced. Two layers close it, each failing
+closed on its own: `bun run scripts/check-slice-shapes.ts` (in the `test` gate)
+rejects any `.ts`/`.tsx` file under `features/` whose name is not a sanctioned
+shape (`*.core.ts` · `*.io.ts` · `*.routes.ts` · `*.queries.ts` · `*.route.tsx`
+· their `*.test.*` siblings), and Biome's last override treats any such file as
+functional core anyway. So logic has nowhere to hide: it must take a shape, and
+every shape carries rules.
+
 ## Other axioms (each enforced by a tool)
 
 - **Named params for 2+ args — on signatures you design.** A GritQL plugin
@@ -115,9 +127,15 @@ any `*.io` module are banned, the globals `Date` / `process` / `Promise` /
   Tests/lint verify deterministic code; **evals** verify the non-deterministic
   half — including the harness itself. A frozen, representative task set
   (`evals/tasks.jsonl`) is re-run to score whether a change to `.claude/`
-  (CLAUDE.md, skills, hooks, gates) actually made the agent better: score up →
-  keep and ratchet the floor; a sustained drop → revert (judge over several
-  runs against a noise floor, not a single number). `/retro`
+  (CLAUDE.md, skills, hooks, gates) actually made the agent better. Each task
+  is handed to a headless agent (pinned CLI + model — the two reproducibility
+  knobs) in a throwaway worktree, and passes ONLY when all three hold: the
+  agent produced a non-empty diff, `bun run verify` is green, and a per-task
+  deterministic assertion matches — so "did nothing" cannot score as "passed".
+  Scores persist and gate against a committed floor (`evals/baseline.json`):
+  raise the floor only after a real run reproduces a higher score, lower it
+  only with a documented reason. Runs on every PR touching `.claude/**` and
+  weekly. `/retro`
   (`.claude/skills/retro`) is the diagnosis step — it mines `.claude/traces/`,
   git history, and merged PRs into a few ranked, **enforcement-biased**
   proposals (prefer a hook/lint/test/script over a guideline; enforcements

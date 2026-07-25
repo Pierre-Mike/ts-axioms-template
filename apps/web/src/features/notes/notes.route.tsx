@@ -7,7 +7,7 @@
  */
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { createRoute } from "@tanstack/react-router"
-import { decodeNote } from "@ts-axioms/shared"
+import { decodeApiErrorBody, decodeNote } from "@ts-axioms/shared"
 import { useState } from "react"
 import { api } from "../../lib/api"
 import { rootRoute } from "../../root-route"
@@ -21,7 +21,13 @@ function NotesComponent() {
   const createNote = useMutation({
     mutationFn: async (noteText: string) => {
       const res = await api.notes.$post({ json: { text: noteText } })
-      if (!res.ok) throw new Error(`create note failed: ${res.status}`)
+      if (!res.ok) {
+        // Decode against the shared ApiErrorBody envelope so the failure
+        // reason (e.g. NoteLimitReached) reaches the UI instead of a bare
+        // status code.
+        const body = decodeApiErrorBody(await res.json())
+        throw new Error(body.error._tag)
+      }
       return decodeNote(await res.json())
     },
     onSuccess: () => {
@@ -48,6 +54,11 @@ function NotesComponent() {
           Add
         </button>
       </form>
+      {createNote.isError && (
+        <p role="alert" data-testid="note-error">
+          {createNote.error.message}
+        </p>
+      )}
       <ul data-testid="note-list">
         {notes.map((note) => (
           <li key={note.id} data-testid="note-item">

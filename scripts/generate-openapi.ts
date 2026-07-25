@@ -117,6 +117,8 @@ const doc = {
         },
       },
     },
+    // scaffold:slice-anchor — scripts/scaffold-slice.ts inserts new slice path
+    // entries directly above this marker; do not remove or reindent it.
   },
 }
 

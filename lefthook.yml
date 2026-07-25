@@ -27,6 +27,11 @@ pre-push:
     # global properties a changed-files view can miss.
     - name: audit
       run: bun run audit
-    # Type gate across the workspace solution.
+    # Type gate across the workspace solution. Plain `tsc -b` — the same
+    # command the required CI typecheck job runs. NOT `tsc -b --noEmit`: a
+    # composite build may not disable emit (TS6310), and because `-b` skips
+    # up-to-date projects that combination passes silently on a warm build and
+    # only fails once something is stale — a gate that passes for the wrong
+    # reason. scripts/harness-doctor.core.ts asserts the pairing never returns.
     - name: typecheck
-      run: tsc -b --noEmit
+      run: tsc -b

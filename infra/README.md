@@ -33,11 +33,31 @@ bun run preview                # pulumi preview
 bun run up                     # build image, push, deploy Cloud Run
 ```
 
-The stack output `serverUrl` is the public URL; `GET <serverUrl>/health`
-verifies the deploy end-to-end.
+The stack output `serverUrl` is the public URL (once you opt into public
+access — see below); `GET <serverUrl>/health` verifies the deploy end-to-end.
 
 Optional config: `ts-axioms:serviceName` (default `ts-axioms-server`),
 `ts-axioms:appVersion` (default `0.0.0`, surfaced by `/health`).
+
+### GCP-specific config
+
+- `gcp:region` — Cloud Run + Artifact Registry location. Defaults to
+  `europe-west1` (decoded via `config.core.ts`'s `decodeGcpRuntimeConfig`, not
+  an ad-hoc fallback).
+- `ts-axioms:allowPublicAccess` (`pulumi config set ts-axioms:allowPublicAccess true`)
+  — grants `roles/run.invoker` to `allUsers`. **Private by default**; the
+  service has no public invoker until you opt in.
+
+### Persistence caveat: sqlite on Cloud Run
+
+Cloud Run's container filesystem is per-instance ephemeral tmpfs: it's wiped
+on every scale event, restart, or new revision. The Notes slice's sqlite file
+(`NOTES_DB_PATH`, set by `apps/server/Dockerfile` to `/app/data/notes.sqlite`)
+is **not durable** across instances on this target — fine for demoing the
+container, not for real data. For actual persistence, either mount a durable
+volume (Cloud Run NFS/GCS FUSE volume mounts), move Notes to Cloud SQL, or
+replicate the sqlite file to object storage with
+[litestream](https://litestream.io).
 
 ## Adding a provider (aws / azure / cloudflare)
 

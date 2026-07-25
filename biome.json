@@ -157,11 +157,21 @@
                 },
                 "patterns": [
                   {
-                    "group": ["**/*.io", "**/*.io.ts", "./*.io", "../**/*.io"],
+                    "group": ["**/*.io", "**/*.io.ts", "./*.io", "../**/*.io", "**/*.io.js"],
                     "message": "Functional core must not import imperative-shell I/O services (*.io). Keep core pure; wire io in *.routes.ts / main.ts."
                   },
                   {
-                    "group": ["../*/*.core", "../*/*.routes"],
+                    "group": [
+                      "../*/*.core",
+                      "../*/*.routes",
+                      "../*/**/*.{core,routes}",
+                      "../*/*.{core,routes}.js",
+                      "**/features/*/*.{core,routes}",
+                      "**/features/*/*.{core,routes}.js",
+                      "../*/index",
+                      "../**/index",
+                      "**/features/*/index"
+                    ],
                     "message": "A feature slice must not reach into a sibling slice's internals — depend on its published door (a service Tag + a shared Schema contract promoted to shared/). Modular monolith: modules talk through narrow doors, not back-channels."
                   }
                 ]
@@ -191,7 +201,86 @@
                       "../*/*.io",
                       "../*/*.routes",
                       "../*/*.queries",
-                      "../*/*.route"
+                      "../*/*.route",
+                      "../*/**/*.{core,io,routes,queries,route}",
+                      "../*/*.{core,io,routes,queries,route}.js",
+                      "**/features/*/*.{core,io,routes,queries,route}",
+                      "**/features/*/*.{core,io,routes,queries,route}.js",
+                      "../*/index",
+                      "../**/index",
+                      "**/features/*/index"
+                    ],
+                    "message": "A feature slice must not reach into a sibling slice's internals — depend on its published door (a service Tag + a shared Schema contract promoted to shared/). Modular monolith: modules talk through narrow doors, not back-channels."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/features/**/*.ts",
+        "**/features/**/*.tsx",
+        "!**/*.core.ts",
+        "!**/*.core.tsx",
+        "!**/*.io.ts",
+        "!**/*.routes.ts",
+        "!**/*.queries.ts",
+        "!**/*.route.tsx",
+        "!**/*.test.ts",
+        "!**/*.test.tsx"
+      ],
+      "plugins": ["./biome-plugins/no-throw-in-core.grit", "./biome-plugins/no-await-in-core.grit"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "fetch": "This file is not a sanctioned slice shape, so it is treated as functional core — no I/O. Call external services from the slice's *.io.ts port.",
+                  "process": "Functional core must not read the environment — accept config as plain input; the shell reads platform/config.ts.",
+                  "Date": "Functional core must not read the clock — accept timestamps (epoch ms) as plain input from the shell.",
+                  "Promise": "Functional core must stay synchronous — do async work in *.io.ts and pass plain data in.",
+                  "console": "Functional core must not perform I/O — return values and let the shell log.",
+                  "setTimeout": "Functional core must not schedule work — keep it synchronous data-in/data-out.",
+                  "setInterval": "Functional core must not schedule work — keep it synchronous data-in/data-out."
+                }
+              }
+            },
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "axios": {
+                    "message": "Use the typed Hono RPC client (hc<AppType>) instead of axios (ts-axioms: no axios)."
+                  },
+                  "effect": {
+                    "importNames": ["Effect", "Layer", "Context", "ManagedRuntime", "Runtime"],
+                    "message": "This file is not a sanctioned slice shape, so it is treated as functional core: model failures as Either/Option/Data. The Effect runtime lives only in *.io.ts / *.routes.ts / main.ts — rename this file to *.core.ts, or move the runtime work into the slice's io/routes shape."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["**/*.io", "**/*.io.ts", "./*.io", "../**/*.io"],
+                    "message": "This file is not a sanctioned slice shape, so it is treated as functional core and must not import imperative-shell I/O services (*.io). Wire io in *.routes.ts / main.ts."
+                  },
+                  {
+                    "group": [
+                      "../*/*.core",
+                      "../*/*.io",
+                      "../*/*.routes",
+                      "../*/*.queries",
+                      "../*/*.route",
+                      "../*/**/*.{core,io,routes,queries,route}",
+                      "../*/*.{core,io,routes,queries,route}.js",
+                      "**/features/*/*.{core,io,routes,queries,route}",
+                      "**/features/*/*.{core,io,routes,queries,route}.js",
+                      "../*/index",
+                      "../**/index",
+                      "**/features/*/index"
                     ],
                     "message": "A feature slice must not reach into a sibling slice's internals — depend on its published door (a service Tag + a shared Schema contract promoted to shared/). Modular monolith: modules talk through narrow doors, not back-channels."
                   }
