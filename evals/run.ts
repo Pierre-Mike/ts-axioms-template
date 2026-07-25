@@ -313,6 +313,14 @@ const prepare = async (input: {
   readonly options: Options
 }): Promise<void> => {
   await addWorktree({ dir: input.dir, ref: input.options.ref, dirty: input.options.dirty })
+  // Commit the starting state (including any --dirty overlay) so churn measures
+  // the AGENT's diff, not the harness files we copied in behind it.
+  await sh({
+    script:
+      'git add -A && git -c user.email=evals@local -c user.name=evals commit -q --allow-empty -m "eval baseline"',
+    cwd: input.dir,
+    timeoutMs: 120_000,
+  })
   if (input.options.skipInstall) return
   const installed = await shell({
     cmd: ["bun", "install", "--frozen-lockfile"],
