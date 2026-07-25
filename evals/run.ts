@@ -91,6 +91,18 @@ interface Ran {
 const GRACE_MS = 15_000
 
 /**
+ * A give-up timer that does NOT hold the event loop open — a plain
+ * `Bun.sleep(15 minutes)` in a losing race keeps the runner alive long after
+ * the grid is written.
+ */
+const giveUpAfter = <T>(input: { readonly ms: number; readonly value: T }): Promise<T> =>
+  new Promise<T>((resolve) => {
+    const timer = setTimeout(() => resolve(input.value), input.ms)
+    const unrefable: { unref?: () => void } = timer
+    unrefable.unref?.()
+  })
+
+/**
  * Killing a process does NOT close pipes its grandchildren inherited — an
  * agent's test that leaves a server running keeps stdout open forever, and a
  * plain `await new Response(proc.stdout).text()` would hang the whole grid on
@@ -104,7 +116,7 @@ const readOrGiveUp = async (input: {
 }): Promise<string> => {
   if (input.stream === null) return ""
   const text = new Response(input.stream).text()
-  return Promise.race([text, Bun.sleep(input.budgetMs).then(() => "")]).catch(() => "")
+  return Promise.race([text, giveUpAfter({ ms: input.budgetMs, value: "" })]).catch(() => "")
 }
 
 const shell = async (input: {
@@ -130,7 +142,7 @@ const shell = async (input: {
   const [stdout, stderr, code] = await Promise.all([
     readOrGiveUp({ stream: proc.stdout, budgetMs }),
     readOrGiveUp({ stream: proc.stderr, budgetMs }),
-    Promise.race([proc.exited, Bun.sleep(budgetMs).then(() => 124)]),
+    Promise.race([proc.exited, giveUpAfter({ ms: budgetMs, value: 124 })]),
   ])
   clearTimeout(killer)
   return { code, stdout, stderr, ms: (Bun.nanoseconds() - startedNs) / 1e6, timedOut }
