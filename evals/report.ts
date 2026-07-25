@@ -183,22 +183,37 @@ const compare = async (input: {
   const base = await readRun(input.basePath)
   const candidate = await readRun(input.candidatePath)
   const taskIds = [...new Set([...base.cells, ...candidate.cells].map((cell) => cell.taskId))]
-  const perTask = taskIds.map((taskId) => {
-    const baseScores = scoresFor({ cells: base.cells, taskId })
-    const candidateScores = scoresFor({ cells: candidate.cells, taskId })
-    const verdict = verdictOf({ base: baseScores, candidate: candidateScores })
+  const compared = taskIds.map((taskId) => ({
+    taskId,
+    baseScores: scoresFor({ cells: base.cells, taskId }),
+    candidateScores: scoresFor({ cells: candidate.cells, taskId }),
+  }))
+  // A task only one side ran is not a regression — it is missing data.
+  const bothRan = compared.filter(
+    (entry) => entry.baseScores.length > 0 && entry.candidateScores.length > 0,
+  )
+  const skipped = compared
+    .filter((entry) => entry.baseScores.length === 0 || entry.candidateScores.length === 0)
+    .map((entry) => entry.taskId)
+  const perTask = bothRan.map((entry) => {
+    const verdict = verdictOf({ base: entry.baseScores, candidate: entry.candidateScores })
     return [
-      taskId,
-      mean(baseScores).toFixed(2),
-      mean(candidateScores).toFixed(2),
+      entry.taskId,
+      mean(entry.baseScores).toFixed(2),
+      mean(entry.candidateScores).toFixed(2),
       signed(verdict.delta),
       `±${verdict.threshold.toFixed(2)}`,
       verdict.label,
     ]
   })
+  const comparableIds = bothRan.map((entry) => entry.taskId)
   const overall = verdictOf({
-    base: base.cells.map((cell) => scoreOf(cell.checks)),
-    candidate: candidate.cells.map((cell) => scoreOf(cell.checks)),
+    base: base.cells
+      .filter((cell) => comparableIds.includes(cell.taskId))
+      .map((cell) => scoreOf(cell.checks)),
+    candidate: candidate.cells
+      .filter((cell) => comparableIds.includes(cell.taskId))
+      .map((cell) => scoreOf(cell.checks)),
   })
   return [
     "# Eval comparison",
@@ -213,6 +228,7 @@ const compare = async (input: {
       headers: ["task", "base", "candidate", "delta", "noise floor", "verdict"],
       rows: perTask,
     }),
+    skipped.length === 0 ? "" : `\n_Not compared (only one side ran): ${skipped.join(", ")}._`,
   ].join("\n")
 }
 
