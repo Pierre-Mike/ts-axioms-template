@@ -14,7 +14,7 @@
     "dev:web": "cd apps/web && bun run dev",
     "lint": "biome check --write .",
     "lint:ci": "biome ci .",
-    "test": "bun run scripts/check-colocated-tests.ts && bun run scripts/check-harness.ts && bun test apps/server shared scripts infra",
+    "test": "bun run scripts/check-colocated-tests.ts && bun run scripts/check-slice-shapes.ts && bun run scripts/check-harness.ts && bun test apps/server shared scripts infra",
     "doctor": "bun run scripts/check-harness.ts",
     "test:e2e": "cd apps/e2e && bunx playwright test",
     "test:mutation": "bunx stryker run",

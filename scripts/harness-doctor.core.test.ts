@@ -243,6 +243,79 @@ describe("harness doctor", () => {
     expect(findings.some((finding) => finding.axiom === "modules talk through doors")).toBe(true)
   })
 
+  it("flags a deleted slice-default override — purity would be opt-in by FILENAME again", () => {
+    const biome = tamperedBiome((clone) => {
+      clone.overrides = (clone.overrides as Array<{ includes?: string[] }>).filter(
+        (override) => !(override.includes ?? []).includes("**/features/**/*.ts"),
+      )
+    })
+    const findings = checkBiome(biome)
+    expect(findings.some((finding) => finding.problem.includes("opt-in by FILENAME"))).toBe(true)
+  })
+
+  it("flags slice-default purity globals flipped to level off (keys retained)", () => {
+    const biome = tamperedBiome((clone) => {
+      const rule = dig({
+        value: overrideIncluding({
+          overrides: asOverrides(clone),
+          shape: "**/features/**/*.ts",
+        }),
+        path: ["linter", "rules", "style", "noRestrictedGlobals"],
+      }) as Record<string, unknown> | undefined
+      if (rule) rule.level = "off"
+    })
+    const findings = checkBiome(biome)
+    expect(
+      findings.some(
+        (finding) =>
+          finding.problem.includes("**/features/**/*.ts") &&
+          finding.problem.includes('not at level "error"'),
+      ),
+    ).toBe(true)
+  })
+
+  it("flags the no-await plugin stripped from the slice-default override", () => {
+    const biome = tamperedBiome((clone) => {
+      removePlugin({
+        override: overrideIncluding({
+          overrides: asOverrides(clone),
+          shape: "**/features/**/*.ts",
+        }),
+        needle: "no-await-in-core",
+      })
+    })
+    const findings = checkBiome(biome)
+    expect(
+      findings.some(
+        (finding) =>
+          finding.problem.includes("no-await-in-core.grit") &&
+          finding.problem.includes("**/features/**/*.ts"),
+      ),
+    ).toBe(true)
+  })
+
+  it("flags the slice-default override ordered BEFORE the door override (its rules become dead config)", () => {
+    const biome = tamperedBiome((clone) => {
+      const overrides = asOverrides(clone)
+      const sliceDefault = overrides.pop()
+      const doorIndex = overrides.findIndex((override) =>
+        strings(override.includes).includes("**/features/**"),
+      )
+      if (sliceDefault) overrides.splice(doorIndex, 0, sliceDefault)
+      clone.overrides = overrides
+    })
+    const findings = checkBiome(biome)
+    expect(findings.some((finding) => finding.problem.includes("declared BEFORE"))).toBe(true)
+  })
+
+  it("flags the slice-shape gate removed from the test script", () => {
+    const pkg = structuredClone(real.pkg) as { scripts: Record<string, string> }
+    pkg.scripts.test = pkg.scripts.test.replace(" && bun run scripts/check-slice-shapes.ts", "")
+    expect(
+      checkScriptWiring(pkg).some((finding) => finding.problem.includes("check-slice-shapes")),
+    ).toBe(true)
+  })
+
   it("flags a dropped commit-msg hook", () => {
     const hooks = structuredClone(real.hooks) as Record<string, unknown>
     delete hooks["commit-msg"]

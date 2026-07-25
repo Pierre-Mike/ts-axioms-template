@@ -70,15 +70,24 @@ const ruleLevelOf = (rule: unknown): string | undefined => {
   return isRecord(rule) && typeof rule.level === "string" ? rule.level : undefined
 }
 
+/**
+ * Positive scope entries only. A leading `!` is an EXCLUSION, so an override
+ * that negates a shape out of its scope (`"!**\/*.io.ts"`) must not be read as
+ * scoped TO it — otherwise the doctor folds the wrong override's rules and
+ * reports a healthy config as decayed.
+ */
+const scopeEntriesOf = (override: Rec): ReadonlyArray<string> =>
+  strings(override.includes).filter((entry) => !entry.startsWith("!"))
+
 const includesShape =
   (shape: string) =>
   (override: Rec): boolean =>
-    strings(override.includes).includes(shape)
+    scopeEntriesOf(override).includes(shape)
 
 const includesSuffix =
   (suffix: string) =>
   (override: Rec): boolean =>
-    strings(override.includes).some((entry) => entry.endsWith(suffix))
+    scopeEntriesOf(override).some((entry) => entry.endsWith(suffix))
 
 /**
  * Biome applies overrides in array order; for a given rule path, the LAST
@@ -149,6 +158,10 @@ const BIOME_AXIOM = "fail-closed lint scoping"
 const CORE_SHAPE = "**/*.core.ts"
 const IO_SHAPE_SUFFIX = "*.io.ts"
 const MAIN_SHAPE = "**/main.ts"
+
+/** The fail-closed catch-all: every slice file that is NOT a sanctioned shape. */
+const SLICE_DEFAULT_SHAPE = "**/features/**/*.ts"
+const SLICE_DOOR_SHAPE = "**/features/**"
 
 /** Grit plugins that only enforce core purity if scoped to the *.core.ts override itself. */
 const CORE_SCOPED_PLUGINS: ReadonlyArray<string> = [
@@ -364,12 +377,119 @@ const checkBiomeMainOverride = (biome: unknown): Finding[] => {
   return [...fetchFinding, ...levelFinding({ axiom: BIOME_AXIOM, shape: MAIN_SHAPE, rule })]
 }
 
+/**
+ * The fail-closed slice default. Without this override, purity is opt-in by
+ * FILENAME: every purity rule is scoped to `**\/*.core.ts`, so a file inside a
+ * slice named anything else (`utils.ts`, `service.ts`) matched no shape and
+ * inherited no rules — domain logic could sit in a slice with the clock, the
+ * env, `throw`, `await` and the Effect runtime all unguarded, and with no
+ * required co-located test either (that gate only looks at `*.core.ts`).
+ */
+const sliceDefaultMissing: Finding = {
+  axiom: "impureim sandwich",
+  problem:
+    "biome.json has no override scoped to **/features/**/*.ts — purity is opt-in by FILENAME again: a slice file whose name matches no sanctioned shape (utils.ts, helpers.ts, service.ts) inherits no purity rules",
+  remedy:
+    "restore the fail-closed slice-default override as the LAST entry in overrides: purity globals + the effect-runtime import ban + the no-throw/no-await plugins, with the sanctioned shapes (*.core.ts / *.io.ts / *.routes.ts / *.queries.ts / *.route.tsx / *.test.*) negated out",
+}
+
+const sliceDefaultGlobalFindings = (rule: unknown): Finding[] =>
+  CORE_DENIED_GLOBALS.filter((name) => !deniedGlobalNamesOf(rule).includes(name)).map((name) => ({
+    axiom: "impureim sandwich",
+    problem: `the effective ${SLICE_DEFAULT_SHAPE} override no longer denies the global \`${name}\``,
+    remedy: `re-add \`${name}\` to the slice-default override's deniedGlobals — an unsanctioned slice file must be treated as pure`,
+  }))
+
+const sliceDefaultImportFindings = (rule: unknown): Finding[] => {
+  const importNames = strings(
+    dig({ value: rule, path: ["options", "paths", "effect", "importNames"] }),
+  )
+  const effectBan = EFFECT_RUNTIME_NAMES.filter((name) => !importNames.includes(name)).map(
+    (name) => ({
+      axiom: "impureim sandwich",
+      problem: `the effective ${SLICE_DEFAULT_SHAPE} override no longer bans importing \`${name}\` from effect`,
+      remedy:
+        "restore the effect-runtime import ban in the slice-default override — the Effect runtime belongs to *.io.ts / *.routes.ts / main.ts",
+    }),
+  )
+  const doorBan: Finding[] = patternGroupsOf(rule).includes(CORE_SIBLING_PATTERN)
+    ? []
+    : [
+        {
+          axiom: "modules talk through doors",
+          problem: `the effective ${SLICE_DEFAULT_SHAPE} override no longer bans a sibling slice's internals (${CORE_SIBLING_PATTERN})`,
+          remedy:
+            "restate the sibling-slice ban in the slice-default override — being last, it replaces the door override's patterns wholesale rather than inheriting them",
+        },
+      ]
+  return [...effectBan, ...doorBan]
+}
+
+const sliceDefaultPluginFindings = (input: {
+  readonly overrides: ReadonlyArray<Rec>
+  readonly matches: (override: Rec) => boolean
+}): Finding[] => {
+  const registered = input.overrides
+    .filter(input.matches)
+    .flatMap((override) => strings(override.plugins))
+  return CORE_SCOPED_PLUGINS.filter(
+    (plugin) => !registered.some((entry) => entry.endsWith(plugin)),
+  ).map((plugin) => ({
+    axiom: BIOME_AXIOM,
+    problem: `grit plugin ${plugin} is not registered on the ${SLICE_DEFAULT_SHAPE} override — an unsanctioned slice file could still throw/await`,
+    remedy: `register ./biome-plugins/${plugin} on the slice-default override as well as the *.core.ts one`,
+  }))
+}
+
+/**
+ * Order matters: rule options replace wholesale on the LAST matching override,
+ * so a door override declared after the slice default would silently drop the
+ * purity rules for exactly the files this check exists to protect.
+ */
+const sliceDefaultOrderFindings = (input: {
+  readonly overrides: ReadonlyArray<Rec>
+  readonly index: number
+}): Finding[] => {
+  const doorIndex = input.overrides.findIndex(includesShape(SLICE_DOOR_SHAPE))
+  return doorIndex === -1 || doorIndex < input.index
+    ? []
+    : [
+        {
+          axiom: BIOME_AXIOM,
+          problem: `the ${SLICE_DEFAULT_SHAPE} override is declared BEFORE the ${SLICE_DOOR_SHAPE} override — the later one replaces its rules wholesale, so slice-default purity is dead config`,
+          remedy: `move the slice-default override after the ${SLICE_DOOR_SHAPE} override (keep it last in the array)`,
+        },
+      ]
+}
+
+const checkBiomeSliceDefault = (biome: unknown): Finding[] => {
+  const matches = includesShape(SLICE_DEFAULT_SHAPE)
+  const overrides = overridesOf(biome)
+  const index = overrides.findIndex(matches)
+  if (index === -1) return [sliceDefaultMissing]
+  const globalsRule = effectiveRuleNode({
+    biome,
+    matches,
+    rulePath: ["style", "noRestrictedGlobals"],
+  })
+  return [
+    ...sliceDefaultGlobalFindings(globalsRule),
+    ...levelFinding({ axiom: "impureim sandwich", shape: SLICE_DEFAULT_SHAPE, rule: globalsRule }),
+    ...sliceDefaultImportFindings(
+      effectiveRuleNode({ biome, matches, rulePath: ["style", "noRestrictedImports"] }),
+    ),
+    ...sliceDefaultPluginFindings({ overrides, matches }),
+    ...sliceDefaultOrderFindings({ overrides, index }),
+  ]
+}
+
 export const checkBiome = (biome: unknown): Finding[] => [
   ...checkBiomeGlobalDenials(biome),
   ...checkBiomeDoorBan(biome),
   ...checkBiomeIoPort(biome),
   ...checkBiomeMainOverride(biome),
   ...checkBiomeCoreOverride(biome),
+  ...checkBiomeSliceDefault(biome),
   ...checkBiomePlugins(biome),
 ]
 
@@ -572,7 +692,7 @@ export const checkCanonSync = (input: {
 }
 
 const VERIFY_GATES = ["lint:ci", "typecheck", "test", "audit"]
-const TEST_META_GATES = ["check-colocated-tests", "check-harness"]
+const TEST_META_GATES = ["check-colocated-tests", "check-slice-shapes", "check-harness"]
 
 export const checkScriptWiring = (pkg: unknown): Finding[] => {
   const scriptOf = (name: string): string => {

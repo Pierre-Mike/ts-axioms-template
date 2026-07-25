@@ -51,6 +51,18 @@ any `*.io` module are banned, the globals `Date` / `process` / `Promise` /
 `console` / `setTimeout` / `setInterval` are banned, and GritQL plugins
 (`biome-plugins/`) ban `throw` and `await`.
 
+**A slice is a closed set of shapes.** Because those rules attach to the
+`*.core.ts` shape, purity used to be opt-in by FILENAME: a `utils.ts` inside a
+slice matched no shape, so it inherited no purity rules and — the co-located
+test gate only looking at `*.core.ts` — no required test either. Logic could
+hide there with every axiom unenforced. Two layers close it, each failing
+closed on its own: `bun run scripts/check-slice-shapes.ts` (in the `test` gate)
+rejects any `.ts`/`.tsx` file under `features/` whose name is not a sanctioned
+shape (`*.core.ts` · `*.io.ts` · `*.routes.ts` · `*.queries.ts` · `*.route.tsx`
+· their `*.test.*` siblings), and Biome's last override treats any such file as
+functional core anyway. So logic has nowhere to hide: it must take a shape, and
+every shape carries rules.
+
 ## Other axioms (each enforced by a tool)
 
 - **Named params for 2+ args — on signatures you design.** A GritQL plugin
