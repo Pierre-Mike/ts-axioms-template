@@ -82,8 +82,26 @@ miss was `background-job` (the endpoint's counter never advanced, though the
 code looked right — exactly the failure a grep-based assert would have
 scored green).
 
-Beat these numbers before claiming a harness change helped, and re-run with
-`--repeats 3` before trusting a delta.
+### Cheap-tier reliability (haiku, `core` suite, 3 repeats — 21 cells, $5.20)
+
+mean **0.960**, 81% fully green, **$0.25/task**, σ 0.103.
+
+| archetype | haiku pass rate |
+| --- | --- |
+| error taxonomy · contract · pure algorithm · web loader/query | 3/3 |
+| persistence + state machine | 2/3 |
+| cross-cutting middleware | 2/3 |
+| external integration (upstream failure → typed 502) | 1/3 |
+
+Read that as a routing policy, not a verdict: the cheap tier is dependable on
+the shapes the scaffolder already stamps out, and flaky exactly where a task
+needs multi-step *runtime* behaviour to be right. One sample would have called
+`external-http` a pass.
+
+**Noise floor for this suite:** σ 0.103 over 21 cells → SE 0.023, so a 3-repeat
+A/B needs to move the mean by **≳0.06** to clear 2σ. Anything smaller is dice.
+Beat the table above before claiming a harness change helped, and always
+re-run with `--repeats 3` before trusting a delta.
 
 ## Adding a task
 
