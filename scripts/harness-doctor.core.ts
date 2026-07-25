@@ -509,15 +509,33 @@ const HOOK_EXPECTATIONS = [
   { section: "pre-push", needle: "audit", gate: "the fallow audit gate" },
 ] as const
 
-export const checkHooks = (hooks: unknown): Finding[] =>
-  HOOK_EXPECTATIONS.filter(
+/**
+ * `tsc -b --noEmit` is invalid — a composite build may not disable emit
+ * (TS6310) — but `-b` skips up-to-date projects, so the pairing passes on a
+ * warm build and only fails once something is stale. That is a gate that
+ * passes for the wrong reason, so the doctor refuses to let it come back.
+ */
+const buildNoEmitFindings = (hooks: unknown): Finding[] =>
+  hookRuns({ hooks, section: "pre-push" })
+    .filter((run) => run.includes("tsc") && run.includes("-b") && run.includes("--noEmit"))
+    .map((run) => ({
+      axiom: "hooks wired",
+      problem: `lefthook.yml pre-push runs \`${run}\` — a composite build may not disable emit (TS6310), and \`-b\` skips up-to-date projects, so this passes on a warm build and fails only when stale`,
+      remedy:
+        "run plain `tsc -b` in the pre-push typecheck job — the same command the CI gate runs",
+    }))
+
+export const checkHooks = (hooks: unknown): Finding[] => [
+  ...HOOK_EXPECTATIONS.filter(
     (expected) =>
       !hookRuns({ hooks, section: expected.section }).some((run) => run.includes(expected.needle)),
   ).map((expected) => ({
     axiom: "hooks wired",
     problem: `lefthook.yml ${expected.section} no longer runs ${expected.gate}`,
     remedy: `restore the ${expected.section} job running \`${expected.needle}\` — hooks are the first line of the harness`,
-  }))
+  })),
+  ...buildNoEmitFindings(hooks),
+]
 
 const requiredContextsOf = (ruleset: Rec): ReadonlyArray<string> => {
   const rules = Array.isArray(ruleset.rules) ? ruleset.rules.filter(isRecord) : []
