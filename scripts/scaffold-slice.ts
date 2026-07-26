@@ -7,6 +7,10 @@
  * route in api.ts over the shared appRuntime, and registers the live Layer in
  * platform/runtime.ts. Deterministic scaffolding beats a prose recipe: humans
  * and agents get the exact same, gate-passing shape every time.
+ *
+ * `--door` additionally emits <feature>.door.ts, the slice's published
+ * surface (the modular-monolith door). Opt-in on purpose: a door nobody
+ * imports yet is an unused export, and `bun run audit` fails on dead code.
  */
 import { existsSync } from "node:fs"
 import { mkdir } from "node:fs/promises"
@@ -19,9 +23,16 @@ const fail = (msg: string): never => {
   process.exit(1)
 }
 
-const name = process.argv[2] ?? ""
+const usage = "usage: bun run scaffold:slice <feature> [--door]  (kebab-case, e.g. user-profile)"
+
+const args = process.argv.slice(2)
+const unknownFlag = args.find((arg) => arg.startsWith("-") && arg !== "--door")
+if (unknownFlag !== undefined) fail(`unknown flag ${unknownFlag}\n${usage}`)
+
+const withDoor = args.includes("--door")
+const name = args.find((arg) => !arg.startsWith("-")) ?? ""
 if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(name)) {
-  fail("usage: bun run scaffold:slice <feature>  (kebab-case, e.g. user-profile)")
+  fail(usage)
 }
 
 const pascal = name
@@ -176,6 +187,25 @@ describe("GET /${name}", () => {
 })
 `
 
+const doorTs = `/**
+ * Published door for the \`${name}\` slice (modular monolith) — the ONE file
+ * another feature slice may import; Biome bans every other cross-slice path,
+ * and a pure \`*.core.ts\` may not import a door at all.
+ *
+ * It re-exports the service \`Context.Tag\` and its interface type, so a
+ * consumer depends on the Tag and never on the implementation: swapping
+ * \`${pascal}IoLive\` — for a stub in a test, or for a remote client the day
+ * this module ships as its own deployment — is a Layer change at the
+ * composition root, not a call-site change.
+ *
+ * Keep it narrow: whatever this file exports is what other modules couple to.
+ * Data crossing the door belongs in a \`shared/\` Schema contract; promote it
+ * and re-export it here so consumers have a single import site, e.g.
+ * \`export { ${pascal}, type ${pascal}List } from "@ts-axioms/shared"\`.
+ */
+export { ${pascal}Io, type ${pascal}IoApi } from "./${name}.io"
+`
+
 // --- write files ------------------------------------------------------------
 
 await mkdir(sliceDir, { recursive: true })
@@ -185,6 +215,7 @@ const files: Record<string, string> = {
   [`${name}.io.ts`]: ioTs,
   [`${name}.routes.ts`]: routesTs,
   [`${name}.routes.test.ts`]: routesTestTs,
+  ...(withDoor ? { [`${name}.door.ts`]: doorTs } : {}),
 }
 for (const [file, content] of Object.entries(files)) {
   await Bun.write(join(sliceDir, file), content)
@@ -280,4 +311,12 @@ next steps:
   4. (web) add ${name}.queries.ts + ${name}.route.tsx; promote contracts to shared/
   5. bun run openapi:gen   # register the path in scripts/generate-openapi.ts
   6. bun run verify
-`)
+${
+  withDoor
+    ? `
+door: ${name}.door.ts is this slice's published surface — re-export the shared
+      Schema contract there too, and import it from the consuming slice now:
+      an unconsumed door is dead code and \`bun run audit\` fails on it.
+`
+    : ""
+}`)

@@ -162,6 +162,10 @@
                     "message": "Functional core must not import imperative-shell I/O services (*.io). Keep core pure; wire io in *.routes.ts / main.ts."
                   },
                   {
+                    "group": ["**/*.door", "**/*.door.ts", "./*.door", "../**/*.door"],
+                    "message": "A published door (*.door.ts) re-exports a service Tag — importing one would pull the Effect runtime into pure code. Consume another module's door from *.routes.ts / *.io.ts and pass plain data into the core."
+                  },
+                  {
                     "group": ["../*/*.core", "../*/*.routes"],
                     "message": "A feature slice must not reach into a sibling slice's internals — depend on its published door (a service Tag + a shared Schema contract promoted to shared/). Modular monolith: modules talk through narrow doors, not back-channels."
                   }
