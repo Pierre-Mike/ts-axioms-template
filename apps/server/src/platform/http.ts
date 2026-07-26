@@ -30,6 +30,7 @@ const INTERNAL_SERVER_ERROR = { _tag: "InternalServerError" } as const
 
 /** Allowlist: only tags registered here cross the wire with their real payload. */
 const STATUS_BY_TAG: Record<string, ContentfulStatusCode> = {
+  InvalidDemoId: 400,
   InvalidVerboseFlag: 400,
   InvalidNoteText: 400,
   InvalidNoteId: 400,

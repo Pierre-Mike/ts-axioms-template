@@ -581,6 +581,9 @@ console.error(
   )}, spend $${totalCost.toFixed(2)}\n  -> ${outPath}\n  report: bun evals/report.ts ${outPath}`,
 )
 
-rmSync(options.workRoot, { recursive: true, force: true })
+// --keep-worktrees exists to post-mortem a failing cell; wiping the work root
+// here would defeat it after every cell had already been spared.
+if (options.keepWorktrees) console.error(`  worktrees kept: ${options.workRoot}`)
+else rmSync(options.workRoot, { recursive: true, force: true })
 // A red eval run is a signal, not a build break: exit 0 unless asked otherwise.
 if (hasFlag("fail-on-red") && passes < cells.length) process.exit(1)

@@ -27,6 +27,11 @@ pre-push:
     # global properties a changed-files view can miss.
     - name: audit
       run: bun run audit
-    # Type gate across the workspace solution.
+    # Type gate across the workspace solution — the same command as the CI
+    # `typecheck` job. NOT `tsc -b --noEmit`: referenced composite projects
+    # must emit their declarations, so build mode + --noEmit fails TS6310 the
+    # moment the graph is not already up to date, and "passes" only by
+    # short-circuiting when it is. A gate that is either a no-op or a hard
+    # error is not a gate.
     - name: typecheck
-      run: tsc -b --noEmit
+      run: tsc -b

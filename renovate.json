@@ -1,7 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Keep the template evergreen: strong gates make automated bumps safe. Patch/minor devDependency updates auto-merge once the four required checks are green.",
+  "description": "Keep the template evergreen: strong gates make automated bumps safe. Patch/minor devDependency updates auto-merge once the four required checks are green; a vulnerability fix always opens a labelled PR a human has to read.",
   "extends": ["config:best-practices", ":semanticCommits"],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": false
+  },
   "packageRules": [
     {
       "matchUpdateTypes": ["patch", "minor"],

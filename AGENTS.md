@@ -19,6 +19,7 @@ apps/server/src/
     <feature>.core.test.ts   # co-located unit test (data-in / data-out)
     <feature>.io.ts          # I/O as an Effect service (Context.Tag + Layer)
     <feature>.routes.ts      # Hono shell; impure read -> pure core -> respond
+    <feature>.door.ts        # opt-in: the ONLY file other slices may import
   platform/                  # cross-cutting infra (runtime, typed config, http errors)
   api.ts                     # assembles routes; exports AppType for hc RPC
   main.ts                    # composition root (Bun.serve, provides live Layers)
@@ -47,9 +48,9 @@ config, HTTP error mapping). Anything feature-specific lives in its slice.
   dependency (DB, HTTP, clock), not just persistence.
 
 Biome enforces this: in `*.core.ts` the imports `Effect`/`Layer`/`Context` and
-any `*.io` module are banned, the globals `Date` / `process` / `Promise` /
-`console` / `setTimeout` / `setInterval` are banned, and GritQL plugins
-(`biome-plugins/`) ban `throw` and `await`.
+any `*.io` or `*.door` module are banned, the globals `Date` / `process` /
+`Promise` / `console` / `setTimeout` / `setInterval` are banned, and GritQL
+plugins (`biome-plugins/`) ban `throw` and `await`.
 
 ## Other axioms (each enforced by a tool)
 
@@ -97,14 +98,21 @@ any `*.io` module are banned, the globals `Date` / `process` / `Promise` /
   a `shared/` `Schema` contract — but NEVER its internal files. Biome
   `noRestrictedImports` bans cross-slice `../*/*.{core,io,routes}` imports under
   `features/`; `fallow audit` rejects the cycles a back-channel would create.
-  Promote a contract to `shared/` the moment a second module needs it. The module
-  boundary (the narrow typed door) is independent of the deployment boundary:
-  compose every module's live `Layer` into one process by default (in-process
-  calls, no network). A module becomes a separate deployment only under real
-  pressure (independent scaling, fault/team isolation) — and because consumers
-  depend on the `Tag`, not the implementation, that split swaps a `Layer` at the
-  composition root, not call sites. Design as if distributed; deploy as if
-  together.
+  Promote a contract to `shared/` the moment a second module needs it. The door
+  is a file: `<feature>.door.ts`, inside the slice that publishes it — ownership
+  stays with the module fronting the code, and it is the one cross-slice path
+  the ban leaves open. It re-exports that slice's service `Context.Tag` and its
+  interface type plus the `shared/` `Schema` contract for the data crossing it,
+  so consumers have a single import site and nothing else in the slice is
+  importable from outside; `bun run scaffold:slice <feature> --door` stamps one
+  out (opt-in — an unconsumed door is dead code the `audit` gate rejects). The
+  module boundary (the narrow typed door) is independent of the deployment
+  boundary: compose every module's live `Layer` into one process by default
+  (in-process calls, no network). A module becomes a separate deployment only
+  under real pressure (independent scaling, fault/team isolation) — and because
+  consumers depend on the `Tag`, not the implementation, that split swaps a
+  `Layer` at the composition root, not call sites. Design as if distributed;
+  deploy as if together.
 - **Platform-agnostic deploy.** The deploy unit is the container
   (`apps/server/Dockerfile`); `infra/` is a Pulumi TS program that dispatches
   to a per-provider `DeployTarget` adapter (`infra/src/registry.ts`; gcp is the
@@ -159,7 +167,8 @@ decide → impure write). Study whichever is closer to your slice, then:
 1. `bun run scaffold:slice <feature>` — generates the slice files in the
    canonical shape, mounts the route in `api.ts` over the shared `appRuntime`,
    and registers the live Layer in `platform/runtime.ts`. Never hand-copy a
-   slice.
+   slice. Add `--door` when another module will consume this one — it also
+   emits `<feature>.door.ts`, the slice's published surface.
 2. Implement the real pure logic in `<feature>.core.ts` + its co-located test.
 3. Replace the stub I/O in `<feature>.io.ts`.
 4. Map new error tags in `platform/http.ts`.
