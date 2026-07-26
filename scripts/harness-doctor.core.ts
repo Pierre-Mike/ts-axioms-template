@@ -353,6 +353,31 @@ export const checkSupplyChain = (input: {
   return [...input.workflows.flatMap(workflowSupplyFindings), ...missingPin]
 }
 
+const CRON_TRIGGER = /^\s*-\s*cron:/m
+const BUN_AUDIT_RUN = /\bbun\s+audit\b/
+
+/**
+ * The `audit` gate is event-driven (PR / push), so a repo that goes weeks
+ * between merges never learns about advisories published against code that
+ * did not change — this repo accumulated 16 of them, one critical, over 2.5
+ * quiet weeks. Matched by SHAPE (any workflow that runs `bun audit` on a
+ * cron), not by filename, so renaming the workflow cannot fail it open.
+ */
+export const checkScheduledAudit = (workflows: ReadonlyArray<WorkflowFile>): Finding[] =>
+  workflows.some(
+    (workflow) => CRON_TRIGGER.test(workflow.text) && BUN_AUDIT_RUN.test(workflow.text),
+  )
+    ? []
+    : [
+        {
+          axiom: "advisories on a clock",
+          problem:
+            "no workflow runs `bun audit` on a cron — advisories only surface when someone happens to open a PR",
+          remedy:
+            "restore the scheduled dependency-advisory workflow (.github/workflows/dependency-audit.yml) — an event-driven audit makes a quiet repo a blind one",
+        },
+      ]
+
 const normalizeRef = (ref: string): string => ref.replace(/^\.\//, "").replace(/\/$/, "")
 
 export const checkTypecheckCoverage = (input: {
@@ -498,6 +523,7 @@ export const runDoctor = (input: DoctorInput): Finding[] => [
     workflows: input.workflows,
     bunVersionFileExists: input.bunVersionFileExists,
   }),
+  ...checkScheduledAudit(input.workflows),
   ...checkTypecheckCoverage({
     workspaceDirs: input.workspaceDirs,
     tsconfigReferences: input.tsconfigReferences,

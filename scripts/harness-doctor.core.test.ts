@@ -14,6 +14,7 @@ import {
   checkCiContract,
   checkEvalTasks,
   checkHooks,
+  checkScheduledAudit,
   checkScriptWiring,
   checkSupplyChain,
   checkTypecheckCoverage,
@@ -112,6 +113,15 @@ describe("harness doctor", () => {
     )
     const findings = checkSupplyChain({ workflows, bunVersionFileExists: true })
     expect(findings.some((finding) => finding.problem.includes("actions/checkout@v6"))).toBe(true)
+  })
+
+  it("flags a de-scheduled advisory scan (the quiet-repo blind spot)", () => {
+    const workflows = real.workflows.map((workflow) => ({
+      name: workflow.name,
+      text: workflow.text.replace(/^\s*-\s*cron:.*$/gm, ""),
+    }))
+    const findings = checkScheduledAudit(workflows)
+    expect(findings.some((finding) => finding.axiom === "advisories on a clock")).toBe(true)
   })
 
   it("flags a workspace outside the tsc -b graph", () => {
