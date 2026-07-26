@@ -12,6 +12,7 @@ import {
   checkBiome,
   checkCanonSync,
   checkCiContract,
+  checkEvalTasks,
   checkHooks,
   checkScriptWiring,
   checkSupplyChain,
@@ -128,6 +129,19 @@ describe("harness doctor", () => {
       docsSyncTestExists: real.docsSyncTestExists,
     })
     expect(findings.some((finding) => finding.problem.includes("CLAUDE.md"))).toBe(true)
+  })
+
+  it("flags an eval task with no asserts — a task the gates alone score for free", () => {
+    const findings = checkEvalTasks({
+      evalTasks: [{ id: "free-points", prompt: "do something" }],
+      evalTasksFileExists: true,
+    })
+    expect(findings.some((finding) => finding.problem.includes("free-points"))).toBe(true)
+  })
+
+  it("flags a deleted eval grid", () => {
+    const findings = checkEvalTasks({ evalTasks: [], evalTasksFileExists: false })
+    expect(findings.some((finding) => finding.problem.includes("tasks.jsonl"))).toBe(true)
   })
 
   it("flags the doctor unwired from the test script", () => {

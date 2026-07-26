@@ -37,6 +37,8 @@ export interface DoctorInput {
   readonly claudeMd: string | null
   readonly agentsMd: string | null
   readonly docsSyncTestExists: boolean
+  readonly evalTasks: ReadonlyArray<unknown>
+  readonly evalTasksFileExists: boolean
 }
 
 type Rec = Record<string, unknown>
@@ -449,7 +451,46 @@ export const checkScriptWiring = (pkg: unknown): Finding[] => {
   return [...verifyFindings, ...testFindings, ...doctorFindings]
 }
 
+/**
+ * The eval grid is the only gate on the non-deterministic half of the harness,
+ * and it decays in one specific way: a task judged by the repo's gates alone
+ * passes when the agent does nothing (`bun run verify` is green on an
+ * untouched checkout). So every task must carry at least one task-specific
+ * assert. This is structural, not a style rule — a task without asserts is
+ * free points, and free points hide regressions.
+ */
+export const checkEvalTasks = (input: {
+  readonly evalTasks: ReadonlyArray<unknown>
+  readonly evalTasksFileExists: boolean
+}): Finding[] => {
+  if (!input.evalTasksFileExists) {
+    return [
+      {
+        axiom: "evals close the loop",
+        problem: "evals/tasks.jsonl is missing — the harness has no eval grid",
+        remedy:
+          "restore the frozen task set; without it a harness change cannot be scored (see evals/README.md)",
+      },
+    ]
+  }
+  return input.evalTasks
+    .filter((task) => !Array.isArray(dig({ value: task, path: ["asserts"] })))
+    .map((task) => {
+      const id = dig({ value: task, path: ["id"] })
+      return {
+        axiom: "evals close the loop",
+        problem: `eval task \`${typeof id === "string" ? id : "?"}\` has no \`asserts\``,
+        remedy:
+          "add at least one task-specific assert — a task judged only by the repo gates passes when the agent does nothing",
+      }
+    })
+}
+
 export const runDoctor = (input: DoctorInput): Finding[] => [
+  ...checkEvalTasks({
+    evalTasks: input.evalTasks,
+    evalTasksFileExists: input.evalTasksFileExists,
+  }),
   ...checkBiome(input.biome),
   ...checkHooks(input.hooks),
   ...checkCiContract({ ci: input.ci, ruleset: input.ruleset }),

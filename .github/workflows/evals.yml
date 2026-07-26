@@ -1,13 +1,24 @@
 name: agent-evals
 
-# Weekly golden-task agent evals (see evals/README.md): headless `claude -p`
-# attempts each task in a throwaway worktree and the repo's own gates judge
-# the result. Measures whether the template still steers agents to the
-# canonical shape. No-ops when the ANTHROPIC_API_KEY secret is absent.
+# Weekly agent evals (see evals/README.md): a headless `claude -p` attempts
+# each task in a throwaway worktree, then the repo's gates AND the task's
+# functional asserts score the result. Measures whether the template still
+# steers agents to working, canonical code — and which model tier it carries.
+# No-ops when the ANTHROPIC_API_KEY secret is absent.
 on:
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
+    inputs:
+      suite:
+        description: "smoke | core | full"
+        default: "core"
+      models:
+        description: "comma-separated model tiers"
+        default: "sonnet"
+      repeats:
+        description: "runs per cell (>=2 to get a noise floor)"
+        default: "1"
 
 permissions:
   contents: read
@@ -15,20 +26,43 @@ permissions:
 jobs:
   evals:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SUITE: ${{ inputs.suite || 'core' }}
+      MODELS: ${{ inputs.models || 'sonnet' }}
+      REPEATS: ${{ inputs.repeats || '1' }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      - name: run golden tasks
+      - name: baseline (no agent — proves the tasks measure real work)
+        run: bun run evals/run.ts --baseline --suite "$SUITE" --concurrency 2 --run-id ci-baseline
+      - name: run the grid
         run: |
           if [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "ANTHROPIC_API_KEY secret not configured — skipping agent evals."
             exit 0
           fi
-          ./evals/run.sh
+          bun install -g @anthropic-ai/claude-code
+          bun run evals/run.ts \
+            --suite "$SUITE" --models "$MODELS" --repeats "$REPEATS" \
+            --concurrency 2 --run-id ci-grid --label "ci ${GITHUB_SHA::7}"
+      - name: report
+        if: always()
+        run: |
+          for run in evals/results/*.json; do
+            [ -e "$run" ] || continue
+            bun run evals/report.ts "$run" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: eval-results
+          path: evals/results/
+          retention-days: 90
