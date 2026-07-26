@@ -98,6 +98,12 @@ the shapes the scaffolder already stamps out, and flaky exactly where a task
 needs multi-step *runtime* behaviour to be right. One sample would have called
 `external-http` a pass.
 
+The flakiness is the task's, not one model's: `crud-state-machine` failed for
+sonnet in the grid and passed on a re-run of the same cell (1/2), while haiku
+went 2/3. Before reading a single red cell as "this model cannot do X", re-run
+it — `--tasks <id> --models <m> --repeats 3 --keep-worktrees` keeps the
+worktrees so the failure can be opened up.
+
 **Noise floor for this suite:** σ 0.103 over 21 cells → SE 0.023, so a 3-repeat
 A/B needs to move the mean by **≳0.06** to clear 2σ. Anything smaller is dice.
 Beat the table above before claiming a harness change helped, and always
