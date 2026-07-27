@@ -147,6 +147,26 @@ plugins (`biome-plugins/`) ban `throw` and `await`.
   compound, guidelines decay). Loop: `/retro` proposes → apply → re-run the
   grid → keep what raises the score.
 
+- **Pick the model tier from the grid, not from habit.** Strong determinism is
+  supposed to buy a cheaper model; the grid says exactly where it does. Measured
+  2026-07-26 at `1de825b` (full 36-cell grid, plus haiku ×3 repeats on `core`):
+  **haiku 0.945 at ~$0.25–0.30/task, sonnet 0.937 at $1.22, opus 0.966 at $2.36** —
+  8× the price of haiku for +0.02 of score. Per archetype, haiku went 3/3 on the
+  shapes the scaffolder already stamps out (typed error taxonomy, shared
+  contracts, pure algorithms, web loader/query slices) and degraded precisely
+  where correctness is multi-step *runtime* behaviour: 2/3 persistence + state
+  machine, 2/3 cross-cutting middleware, 1/3 external-integration failure
+  mapping, and a background job it wired with `Effect.fork` that never ticked.
+  So: **cheap tier for structural work inside the canonical shape; escalate for
+  behaviour that has to be live-correct** (background/scheduled work, upstream
+  failure mapping, anything whose proof is an HTTP round-trip rather than a
+  type). Escalate rather than retry blindly — a red cell is often variance
+  (`crud-state-machine` failed for sonnet in the grid and passed on re-run), so
+  re-run with `--repeats 3` before concluding a tier cannot do something. These
+  numbers are a snapshot of THIS harness: re-measure with `bun run evals` after
+  a harness change or a new model release, and treat the reference tables in
+  `evals/README.md` as the record of what was last measured.
+
 - **The harness checks itself.** Enforcement attaches to file *shape*, not
   location (`**/*.core.ts`, `**/*.io.ts`, `**/features/**`,
   `**/platform/config.ts`): denials are global, allows are sanctioned shapes,
