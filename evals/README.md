@@ -93,6 +93,11 @@ mean **0.960**, 81% fully green, **$0.25/task**, σ 0.103.
 | cross-cutting middleware | 2/3 |
 | external integration (upstream failure → typed 502) | 1/3 |
 
+The policy distilled from these tables lives in the canon ("Pick the model tier
+from the grid, not from habit" in CLAUDE.md / AGENTS.md), so an agent picks up
+the routing without having to find this file. **Re-measuring is what keeps that
+paragraph true — update it whenever these tables move.**
+
 Read that as a routing policy, not a verdict: the cheap tier is dependable on
 the shapes the scaffolder already stamps out, and flaky exactly where a task
 needs multi-step *runtime* behaviour to be right. One sample would have called
