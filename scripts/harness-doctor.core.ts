@@ -394,31 +394,57 @@ export const checkTypecheckCoverage = (input: {
     }))
 }
 
-const CANON_MARKERS = ["<!-- axioms:start -->", "<!-- axioms:end -->"]
+const CANON_HEADINGS = ["## Architecture: feature-first vertical slices", "## Gate commands"]
 
-const checkCanonFile = (query: {
-  readonly name: string
-  readonly text: string | null
-}): Finding[] => {
-  if (query.text === null) {
+const checkAgentsCanon = (agentsMd: string | null): Finding[] => {
+  if (agentsMd === null) {
     return [
       {
-        axiom: "canon sync",
-        problem: `${query.name} is missing`,
-        remedy: `restore ${query.name} — CLAUDE.md and AGENTS.md carry the same canon between axioms:start/end markers`,
+        axiom: "single canon",
+        problem: "AGENTS.md is missing — it is the single source of the agent operating rules",
+        remedy: "restore AGENTS.md; CLAUDE.md is only a redirect that @AGENTS.md-imports it",
       },
     ]
   }
-  const text = query.text
-  return CANON_MARKERS.filter((marker) => !text.includes(marker)).map((marker) => ({
-    axiom: "canon sync",
-    problem: `${query.name} lost its ${marker} sync marker`,
+  return CANON_HEADINGS.filter((heading) => !agentsMd.includes(heading)).map((heading) => ({
+    axiom: "single canon",
+    problem: `AGENTS.md lost its \`${heading}\` canon section`,
     remedy:
-      "restore the axioms:start/end markers — scripts/docs-sync.test.ts gates canon identity through them",
+      "restore the section — AGENTS.md carries the full canon; scripts/docs-sync.test.ts gates it",
   }))
 }
 
-export const checkCanonSync = (input: {
+const checkClaudeRedirect = (claudeMd: string | null): Finding[] => {
+  if (claudeMd === null) {
+    return [
+      {
+        axiom: "single canon",
+        problem: "CLAUDE.md is missing — Claude Code loads the canon through its @AGENTS.md import",
+        remedy: "restore CLAUDE.md as a plain redirect containing an @AGENTS.md import line",
+      },
+    ]
+  }
+  const hasRedirect = claudeMd.split("\n").some((line) => line.trim() === "@AGENTS.md")
+  const redirect: Finding[] = hasRedirect
+    ? []
+    : [
+        {
+          axiom: "single canon",
+          problem: "CLAUDE.md lost its @AGENTS.md import — Claude Code no longer loads the canon",
+          remedy: "add the @AGENTS.md line back; CLAUDE.md stays a plain redirect to the canon",
+        },
+      ]
+  const fork: Finding[] = CANON_HEADINGS.filter((heading) => claudeMd.includes(heading)).map(
+    (heading) => ({
+      axiom: "single canon",
+      problem: `CLAUDE.md carries its own \`${heading}\` section — the canon is forked out of AGENTS.md`,
+      remedy: "delete the duplicated rules from CLAUDE.md and edit AGENTS.md instead",
+    }),
+  )
+  return [...redirect, ...fork]
+}
+
+export const checkCanonRedirect = (input: {
   readonly claudeMd: string | null
   readonly agentsMd: string | null
   readonly docsSyncTestExists: boolean
@@ -427,18 +453,14 @@ export const checkCanonSync = (input: {
     ? []
     : [
         {
-          axiom: "canon sync",
+          axiom: "single canon",
           problem:
-            "scripts/docs-sync.test.ts is missing — canon drift between CLAUDE.md and AGENTS.md is unchecked",
+            "scripts/docs-sync.test.ts is missing — the CLAUDE.md → AGENTS.md redirect is unchecked",
           remedy:
-            "restore the docs-sync test; it fails the build when the marked canon regions differ",
+            "restore the docs-sync test; it fails the build when the redirect breaks or the canon is forked",
         },
       ]
-  return [
-    ...checkCanonFile({ name: "CLAUDE.md", text: input.claudeMd }),
-    ...checkCanonFile({ name: "AGENTS.md", text: input.agentsMd }),
-    ...syncTest,
-  ]
+  return [...checkClaudeRedirect(input.claudeMd), ...checkAgentsCanon(input.agentsMd), ...syncTest]
 }
 
 const VERIFY_GATES = ["lint:ci", "typecheck", "test", "audit"]
@@ -528,7 +550,7 @@ export const runDoctor = (input: DoctorInput): Finding[] => [
     workspaceDirs: input.workspaceDirs,
     tsconfigReferences: input.tsconfigReferences,
   }),
-  ...checkCanonSync({
+  ...checkCanonRedirect({
     claudeMd: input.claudeMd,
     agentsMd: input.agentsMd,
     docsSyncTestExists: input.docsSyncTestExists,
