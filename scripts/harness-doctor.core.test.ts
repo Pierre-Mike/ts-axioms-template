@@ -10,7 +10,7 @@ import { join } from "node:path"
 import { readDoctorInput } from "./check-harness"
 import {
   checkBiome,
-  checkCanonSync,
+  checkCanonRedirect,
   checkCiContract,
   checkEvalTasks,
   checkHooks,
@@ -132,13 +132,22 @@ describe("harness doctor", () => {
     expect(findings.some((finding) => finding.problem.includes("apps/daemon"))).toBe(true)
   })
 
-  it("flags stripped canon markers", () => {
-    const findings = checkCanonSync({
-      claudeMd: (real.claudeMd ?? "").replaceAll("<!-- axioms:start -->", ""),
+  it("flags CLAUDE.md losing its @AGENTS.md redirect", () => {
+    const findings = checkCanonRedirect({
+      claudeMd: (real.claudeMd ?? "").replaceAll("@AGENTS.md", ""),
       agentsMd: real.agentsMd,
       docsSyncTestExists: real.docsSyncTestExists,
     })
     expect(findings.some((finding) => finding.problem.includes("CLAUDE.md"))).toBe(true)
+  })
+
+  it("flags the canon forked back into CLAUDE.md", () => {
+    const findings = checkCanonRedirect({
+      claudeMd: `${real.claudeMd ?? ""}\n${real.agentsMd ?? ""}`,
+      agentsMd: real.agentsMd,
+      docsSyncTestExists: real.docsSyncTestExists,
+    })
+    expect(findings.some((finding) => finding.problem.includes("forked"))).toBe(true)
   })
 
   it("flags an eval task with no asserts — a task the gates alone score for free", () => {
