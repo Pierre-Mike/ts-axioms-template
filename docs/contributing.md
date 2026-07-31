@@ -5,7 +5,7 @@ Trunk-based flow. `main` is protected (see [governance.md](./governance.md)).
 ## Workflow
 
 1. **Branch** off `main`: `git switch -c feat/<slice>`.
-2. **Build** the slice (see "How to add a feature slice" in `CLAUDE.md`).
+2. **Build** the slice (see "How to add a feature slice" in `AGENTS.md`).
 3. **Local gates** — all must pass before you push:
    ```bash
    bun run lint:ci     # biome ci .

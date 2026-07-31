@@ -64,8 +64,9 @@ bun run scaffold:slice <feature>   # core + test + io + routes, mounted + wired
 
 ## AI-ready by construction
 
-- `CLAUDE.md` / `AGENTS.md` share a marker-delimited canon; a unit test fails
-  the build if they drift.
+- `AGENTS.md` is the single, tool-neutral canon; `CLAUDE.md` is a plain
+  redirect that imports it, and a unit test fails the build if the redirect
+  breaks or the canon gets forked.
 - Conventional commits enforced at commit-msg (lefthook); release-please
   automates releases from the history.
 - `openapi.json` is generated from the shared effect `Schema` contracts and
@@ -94,7 +95,8 @@ bun run scaffold:slice <feature>   # core + test + io + routes, mounted + wired
 - [Governance](./docs/governance.md) — the ruleset, applying it, the check-name contract.
 - [Contributing](./docs/contributing.md) — branch → PR → green CI → squash-merge.
 - [Getting started](./docs/getting-started.md) — from template to first feature.
-- `CLAUDE.md` / `AGENTS.md` — agent operating rules + "add a feature slice" recipe.
+- `AGENTS.md` — agent operating rules + "add a feature slice" recipe
+  (`CLAUDE.md` just redirects here).
 
 ## License
 

@@ -42,8 +42,9 @@ uncommitted harness work), `--keep-worktrees` (post-mortem a failure),
 Two deliberate choices in the runner:
 
 - **`--setting-sources project`** — the agent sees only the template's
-  `.claude/` and `CLAUDE.md`, never the operator's personal skills. Otherwise
-  the score measures your laptop, not the template.
+  `.claude/` and the `AGENTS.md` canon (via the `CLAUDE.md` redirect), never
+  the operator's personal skills. Otherwise the score measures your laptop,
+  not the template.
 - **`--permission-mode bypassPermissions`** (default) — the target is a
   disposable worktree in `$TMPDIR`, and permission friction would otherwise be
   scored as model incapability. Override it if you want to measure the
@@ -94,7 +95,7 @@ mean **0.960**, 81% fully green, **$0.25/task**, σ 0.103.
 | external integration (upstream failure → typed 502) | 1/3 |
 
 The policy distilled from these tables lives in the canon ("Pick the model tier
-from the grid, not from habit" in CLAUDE.md / AGENTS.md), so an agent picks up
+from the grid, not from habit" in AGENTS.md), so an agent picks up
 the routing without having to find this file. **Re-measuring is what keeps that
 paragraph true — update it whenever these tables move.**
 

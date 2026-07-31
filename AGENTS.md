@@ -1,12 +1,13 @@
 # AGENTS.md — ts-axioms template
 
-Tool-neutral operating rules for any coding agent working in this repo.
+Tool-neutral operating rules for any coding agent working in this repo. This
+file is the single canon: `CLAUDE.md` is a plain redirect that `@AGENTS.md`-
+imports it for Claude Code, so every agent reads the same rules from one
+place. These rules are enforced by tooling (Biome / Lefthook / Fallow /
+`tsc`); if you fight a rule, fix the design, not the linter. Edit this file
+only — `scripts/docs-sync.test.ts` fails the build if the canon is forked
+back into `CLAUDE.md`.
 
-Everything between the markers below is the shared canon, byte-identical with
-`CLAUDE.md` — `scripts/docs-sync.test.ts` fails the build if they drift. Edit
-both files together.
-
-<!-- axioms:start -->
 ## Architecture: feature-first vertical slices
 
 Code is organized by **feature**, not by layer. Each slice owns its full
@@ -173,8 +174,8 @@ plugins (`biome-plugins/`) ban `throw` and `await`.
   (`scripts/check-harness.ts`, inside the `test` gate) structurally asserts
   the enforcement stack itself: Biome overrides + grit plugins present,
   lefthook jobs wired, CI job names cover the ruleset's required checks,
-  actions SHA-pinned, every workspace in the `tsc -b` graph, canon sync
-  markers intact, gate scripts composed. Deleting a gate is a deliberate,
+  actions SHA-pinned, every workspace in the `tsc -b` graph, the
+  CLAUDE.md → AGENTS.md canon redirect intact, gate scripts composed. Deleting a gate is a deliberate,
   visible act that fails CI — not silent drift. Motivated by a descendant
   audit where an app rename silently evaporated every path-scoped rule.
 
@@ -225,4 +226,3 @@ bun run dev            # server (:8787) + web (:5173)
 CI job names (`lint` / `typecheck` / `test` / `audit`) are a contract with the
 branch ruleset's required checks — keep them identical. `e2e`, `scaffold`, and `zizmor`
 run as additional non-required jobs; mutation tests and agent evals run weekly.
-<!-- axioms:end -->
